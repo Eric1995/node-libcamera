@@ -4,10 +4,9 @@
             "name": "linux-gcc-x64",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/usr/**/include/libcamera",
-                "/home/eric/.cache/node-gyp/**/include/node",
-                "/home/eric/Dev/emsdk/upstream/emscripten/system/include",
-                "/home/eric/.cache/node-gyp/20.10.0/include/node"
+                "/usr/include/libcamera",
+                "${workspaceFolder}/node_modules/node-addon-api",
+                "~/.cache/node-gyp/**/include/**"
             ],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "${default}",
