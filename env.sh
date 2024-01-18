@@ -2,6 +2,7 @@
 # apt install gcc-12-aarch64-linux-gnu g++-12-aarch64-linux-gnu sshpass
 # apt install gcc-12-arm-linux-gnueabihf g++-12-arm-linux-gnueabihf sshpass
 #apt install gcc-11-arm-linux-gnueabihf g++-11-arm-linux-gnueabihf
+# apt install libcamera-dev libtiff-dev libexif-dev
 export AR=aarch64-linux-gnu-ar \
 export CC=aarch64-linux-gnu-g++-12 \
 export CXX=aarch64-linux-gnu-g++-12 \
