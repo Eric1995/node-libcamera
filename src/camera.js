@@ -51,8 +51,8 @@ function captureImage() {
   });
   const configRes = camera.createStreams([
     {
-      width: 1920,
-      height: 1080,
+      width: 4656,
+      height: 3496,
       role: 'Raw',
       pixel_format: 'SGBRG10_CSI2P',
       // pixel_format: 'YUV420',
@@ -72,12 +72,12 @@ function captureImage() {
           console.log('dng saved');
         });
       }
-      if (still_count === 1) {
-        console.log(`save image to jpeg`);
-        image.toJPEG(`./${still_count}.jpeg`, () => {
-          console.log('jpeg saved');
-        });
-      }
+      // if (still_count === 1) {
+      //   console.log(`save image to jpeg`);
+      //   image.toJPEG(`./${still_count}.jpeg`, () => {
+      //     console.log('jpeg saved');
+      //   });
+      // }
       still_count++;
     },
   });

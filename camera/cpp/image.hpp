@@ -41,19 +41,21 @@ class SaveWorker : public AsyncWorker
         stream_info.stride = stream->configuration().stride;
         stream_info.pixel_format = stream->configuration().pixelFormat;
         stream_info.colour_space = stream->configuration().colorSpace;
+        StillOptions *options = new StillOptions();
         if (type == 1)
         {
-            dng_save(vec, stream_info, *metadata, file_name, "picam", nullptr);
+            dng_save(vec, stream_info, *metadata, file_name, "picam", options);
         }
         if (type == 2)
         {
-            StillOptions *options{};
+            options->quality = 90;
             jpeg_save(vec, stream_info, *metadata, file_name, "picam", options);
         }
         if (type == 3)
         {
             yuv_save(vec, stream_info, file_name, nullptr);
         }
+        delete options;
     }
     void OnOK() override
     {

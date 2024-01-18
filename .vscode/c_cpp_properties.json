@@ -5,6 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/usr/include/libcamera",
+                "/usr/local/include/libcamera",
                 "${workspaceFolder}/node_modules/node-addon-api",
                 "~/.cache/node-gyp/**/include/**"
             ],

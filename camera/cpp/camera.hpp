@@ -240,7 +240,7 @@ class Camera : public Napi::ObjectWrap<Camera>
         state = Running;
         requests_deque.clear();
         wait_deque.clear();
-        // control_list.set(libcamera::controls::AfMode, libcamera::controls::AfModeContinuous);
+        control_list.set(libcamera::controls::AfMode, libcamera::controls::AfModeContinuous);
         if (auto_queue_request)
         {
             std::cout << "start queue request at: " << millis() << std::endl;
@@ -253,7 +253,6 @@ class Camera : public Napi::ObjectWrap<Camera>
                 }
                 else
                 {
-
                     req->reuse(libcamera::Request::ReuseBuffers);
                     req->controls().merge(control_list);
                     camera->queueRequest(req.get());

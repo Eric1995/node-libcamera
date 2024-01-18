@@ -7,15 +7,16 @@
 
 #include <limits>
 #include <map>
+#include <string.h>
+#include <valarray>
 
 #include <libcamera/control_ids.h>
 #include <libcamera/formats.h>
 
 #include <tiffio.h>
 
-// #include "core/still_options.hpp"
+#include "../core/still_options.hpp"
 #include "../core/stream_info.hpp"
-#include "image.hpp"
 
 #ifndef MAKE_STRING
 #define MAKE_STRING "Raspberry Pi"

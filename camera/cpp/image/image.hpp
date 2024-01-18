@@ -17,6 +17,7 @@
 #include <libcamera/controls.h>
 
 #include "../core/stream_info.hpp"
+#include "../core/still_options.hpp"
 
 
 #define LOG(level, text)                                                                                               \
@@ -27,7 +28,7 @@
 	} while (0)
 #define LOG_ERROR(text) std::cerr << text << std::endl
 
-struct StillOptions;
+// struct StillOptions;
 
 // In jpeg.cpp:
 void jpeg_save(std::vector<libcamera::Span<uint8_t>> const &mem, StreamInfo const &info,
