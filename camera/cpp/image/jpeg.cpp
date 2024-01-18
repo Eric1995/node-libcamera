@@ -20,8 +20,8 @@
 #include <jpeglib.h>
 #include <libexif/exif-data.h>
 
-#include "core/still_options.hpp"
-#include "core/stream_info.hpp"
+#include "../core/still_options.hpp"
+#include "../core/stream_info.hpp"
 
 #ifndef MAKE_STRING
 #define MAKE_STRING "Raspberry Pi"

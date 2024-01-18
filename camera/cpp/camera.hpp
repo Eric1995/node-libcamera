@@ -1,25 +1,68 @@
 #ifndef _CAMERA_H_
 #define _CAMERA_H_ 1
-#include "camera_worker.hpp"
+
+#include "dma_heaps.hpp"
+#include "echo_worker.hpp"
 #include "util.hpp"
 #include <cstdint>
+#include <deque>
+#include <iostream>
+#include <libcamera/libcamera.h>
 #include <map>
 #include <napi.h>
 #include <stdint.h>
 #include <string>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
 libcamera::CameraManager cm;
 
+struct crop_t
+{
+    float roi_x = 0;
+    float roi_y = 0;
+    float roi_width = 1;
+    float roi_height = 1;
+};
+
 class Camera : public Napi::ObjectWrap<Camera>
 {
-  public:
-    static Napi::FunctionReference *constructor;
-    CameraWorker *worker = nullptr;
+  private:
+    EchoWorker *worker = nullptr;
+    enum Status
+    {
+        Available,
+        Acquired,
+        Configured,
+        Stopping,
+        Running
+    };
+    Status state = Available;
     uint32_t num = 0;
     std::shared_ptr<libcamera::Camera> camera;
     bool queued = false;
     bool released = false;
+
+    /** 是否自动发送request请求*/
+    bool auto_queue_request = true;
+    float max_frame_rate = 30.0;
+    crop_t crop;
+
+    std::vector<libcamera::StreamRole> stream_roles;
+    std::unique_ptr<libcamera::CameraConfiguration> camera_config = nullptr;
+    libcamera::ControlList control_list;
+    std::deque<libcamera::Stream *> streams;
+    std::vector<std::unique_ptr<libcamera::Request>> requests;
+    std::deque<libcamera::Request *> requests_deque;
+    std::deque<libcamera::Request *> wait_deque;
+    std::map<libcamera::Stream *, Stream *> napi_stream_map;
+    std::map<libcamera::Stream *, unsigned int> stream_index_map;
+
+    DmaHeap dma_heap_;
+
+  public:
+    static Napi::FunctionReference *constructor;
 
     Camera(const Napi::CallbackInfo &info) : Napi::ObjectWrap<Camera>(info)
     {
@@ -28,19 +71,42 @@ class Camera : public Napi::ObjectWrap<Camera>
         auto libcameras = cm.cameras();
         auto camera = libcameras[num];
         this->camera = camera;
-        worker = new CameraWorker(info, camera);
-        worker->SuppressDestruct();
     }
 
     ~Camera()
     {
-        delete this->worker;
+        if (state != Available)
+        {
+            camera->stop();
+            camera->release();
+        }
+        clean();
+        std::cout << "camera destroyed" << std::endl;
+    }
+
+    void clean()
+    {
+        Stream::stream_config_map.clear();
+        streams.clear();
+        stream_index_map.clear();
+        for (auto &request : requests)
+        {
+            for (auto const &buffer_map : request->buffers())
+            {
+                delete buffer_map.second;
+            }
+            // request->buffers().clear();
+        }
+        requests.clear();
+
+        requests_deque.clear();
+        wait_deque.clear();
+        camera->requestCompleted.disconnect();
     }
 
     Napi::Value getId(const Napi::CallbackInfo &info)
     {
         Napi::Env env = info.Env();
-        auto libcameras = cm.cameras();
         return Napi::String::New(env, camera->id());
     };
 
@@ -57,64 +123,222 @@ class Camera : public Napi::ObjectWrap<Camera>
 
     Napi::Value createStreams(const Napi::CallbackInfo &info)
     {
+        clean();
         Napi::HandleScope scope(info.Env());
-        auto list = worker->createStreams(info);
-        return list;
-        auto configs = worker->getStreamConfig();
-        Napi::Array ret = Napi::Array::New(info.Env(), configs.size());
-        uint32_t i = 0;
-        for (auto config : configs)
+        stream_roles.clear();
+        Napi::Array optionList = info[0].As<Napi::Array>();
+        for (int i = 0; i < optionList.Length(); i++)
         {
-            Napi::Object obj = Napi::Object::New(info.Env());
-            obj.Set("stride", config.stride);
-            obj.Set("colorSpace", config.colorSpace->toString());
-            obj.Set("pixelFormat", config.pixelFormat.toString());
-            obj.Set("pixelFormtFourcc", config.pixelFormat.fourcc());
-            obj.Set("frameSize", config.frameSize);
-            obj.Set("width", config.size.width);
-            obj.Set("height", config.size.height);
-            obj.Set("streamIndex", i);
-            ret[i] = obj;
-            i++;
+            Napi::Object option = optionList.Get(i).As<Napi::Object>();
+            if (option.Has("role"))
+            {
+                auto roleValue = option.Get("role");
+                if (roleValue.IsString())
+                {
+                    auto role = roleValue.As<Napi::String>().Utf8Value();
+                    if (role == "Raw")
+                    {
+                        stream_roles.push_back(libcamera::StreamRole::Raw);
+                    }
+                    if (role == "VideoRecording")
+                    {
+                        stream_roles.push_back(libcamera::StreamRole::VideoRecording);
+                    }
+                    if (role == "StillCapture")
+                    {
+                        stream_roles.push_back(libcamera::StreamRole::StillCapture);
+                    }
+                    if (role == "Viewfinder")
+                    {
+                        stream_roles.push_back(libcamera::StreamRole::Viewfinder);
+                    }
+                }
+            }
         }
-        return ret;
+        if (state == Available)
+        {
+            camera->acquire();
+            state = Acquired;
+        }
+        auto config = camera->generateConfiguration(stream_roles);
+        camera_config = std::move(config);
+        for (int i = 0; i < optionList.Length(); i++)
+        {
+            Napi::Object option = optionList.Get(i).As<Napi::Object>();
+            libcamera::StreamConfiguration &streamConfig = camera_config->at(i);
+            if (option.Has("width") && option.Get("width"))
+                streamConfig.size.width = option.Get("width").As<Napi::Number>().Uint32Value();
+            if (option.Has("height") && option.Get("height").IsNumber())
+                streamConfig.size.height = option.Get("height").As<Napi::Number>().Uint32Value();
+            if (option.Has("pixel_format") && option.Get("pixel_format").IsString())
+                streamConfig.pixelFormat = libcamera::PixelFormat::fromString(option.Get("pixel_format").As<Napi::String>().Utf8Value());
+        }
+        auto status = camera_config->validate();
+        camera->configure(camera_config.get());
+        state = Configured;
+        camera->requestCompleted.connect(this, [this, &info](libcamera::Request *request) { this->requestComplete(info, request); });
+        Napi::Array napi_stream_array = Napi::Array::New(info.Env(), camera_config->size());
+        for (int i = 0; i < camera_config->size(); i++)
+        {
+            Napi::Object option = optionList.Get(i).As<Napi::Object>();
+            libcamera::StreamConfiguration &streamConfig = camera_config->at(i);
+            auto stream = streamConfig.stream();
+            auto stream_obj =
+                Stream::constructor->New({Napi::Number::New(info.Env(), i), Napi::Number::New(info.Env(), streamConfig.stride), Napi::String::New(info.Env(), streamConfig.colorSpace->toString()),
+                                          Napi::Number::New(info.Env(), streamConfig.frameSize), Napi::Number::New(info.Env(), streamConfig.size.width),
+                                          Napi::Number::New(info.Env(), streamConfig.size.height), Napi::String::New(info.Env(), streamConfig.pixelFormat.toString())});
+            napi_stream_map[stream] = (Stream *)(&stream_obj);
+            napi_stream_array[i] = stream_obj;
+            streams.push_back(stream);
+            stream_index_map[stream] = i;
+            stream_config *_config = new stream_config();
+            Stream::stream_config_map[i] = _config;
+            // Napi::Object option = optionList.Get(i).As<Napi::Object>();
+            if (option.Has("onImageData") && option.Get("onImageData").IsFunction())
+            {
+                auto onImageData = option.Get("onImageData").As<Napi::Function>();
+                _config->callback_ref = Napi::Persistent(onImageData);
+            }
+            auto t1 = millis();
+            for (unsigned int j = 0; j < streamConfig.bufferCount; j++)
+            {
+                if (requests.size() <= j)
+                {
+                    std::unique_ptr<libcamera::Request> req = camera->createRequest();
+                    requests.push_back(std::move(req));
+                }
+                auto &request = requests.at(j);
+                std::string name("rpicam-apps" + std::to_string(i));
+                libcamera::UniqueFD fd = dma_heap_.alloc(name.c_str(), streamConfig.frameSize);
+                std::vector<libcamera::FrameBuffer::Plane> plane(1);
+                plane[0].fd = libcamera::SharedFD(std::move(fd));
+                plane[0].offset = 0;
+                plane[0].length = streamConfig.frameSize;
+                auto buf = new libcamera::FrameBuffer(plane);
+                request->addBuffer(stream, buf);
+            }
+        }
+        return napi_stream_array;
+    }
+
+    Napi::Value start(const Napi::CallbackInfo &info)
+    {
+        if (state == Running)
+        {
+            return Napi::Number::New(info.Env(), -1);
+        }
+        if (worker)
+        {
+            delete worker;
+        }
+        auto now = millis();
+        worker = new EchoWorker(info, camera.get(), &wait_deque, &napi_stream_map, &stream_index_map);
+        worker->Queue();
+        now = millis();
+        int ret = camera->start();
+        std::cout << "camera start cost: " << (millis() - now) << "ms" << std::endl;
+        state = Running;
+        requests_deque.clear();
+        wait_deque.clear();
+        // control_list.set(libcamera::controls::AfMode, libcamera::controls::AfModeContinuous);
+        if (auto_queue_request)
+        {
+            std::cout << "start queue request at: " << millis() << std::endl;
+            for (auto &req : requests)
+            {
+                if (req->status() == libcamera::Request::Status::RequestPending)
+                {
+                    req->controls().merge(control_list);
+                    camera->queueRequest(req.get());
+                }
+                else
+                {
+
+                    req->reuse(libcamera::Request::ReuseBuffers);
+                    req->controls().merge(control_list);
+                    camera->queueRequest(req.get());
+                }
+            }
+        }
+        return Napi::Number::New(info.Env(), ret);
+    }
+
+    void requestComplete(const Napi::CallbackInfo &info, libcamera::Request *request)
+    {
+        struct dma_buf_sync dma_sync
+        {
+        };
+        dma_sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_READ;
+        for (auto const &buffer_map : request->buffers())
+        {
+            int ret = ::ioctl(buffer_map.second->planes()[0].fd.get(), DMA_BUF_IOCTL_SYNC, &dma_sync);
+            if (ret)
+                throw std::runtime_error("failed to sync dma buf on request complete");
+        }
+        wait_deque.push_back(request);
+        worker->notify();
+        // std::cout << "metadata size: " << request->metadata().size() << std::endl;
+
+        requests_deque.push_back(request);
+
+        if (requests_deque.size() >= requests.size())
+        {
+            auto front = requests_deque.front();
+            front->reuse(libcamera::Request::ReuseBuffers);
+            if (state == Running && auto_queue_request)
+            {
+                camera->queueRequest(front);
+                requests_deque.pop_front();
+            }
+        }
     }
 
     Napi::Value config(const Napi::CallbackInfo &info)
     {
         auto option = info[0].As<Napi::Object>();
         if (option.Get("autoQueueRequest").IsBoolean())
-            worker->auto_queue_request = option.Get("autoQueueRequest").As<Napi::Boolean>();
+        {
+            this->auto_queue_request = option.Get("autoQueueRequest").As<Napi::Boolean>();
+        }
+
         if (option.Get("maxFrameRate").IsNumber())
-            worker->setMaxFrameRate(option.Get("maxFrameRate").As<Napi::Number>().FloatValue());
-        if (option.Get("onImageData").IsFunction())
-            worker->callback_ref = Napi::Persistent(option.Get("onImageData").As<Napi::Function>());
+        {
+            max_frame_rate = option.Get("maxFrameRate").As<Napi::Number>().FloatValue();
+            int64_t frame_time = 1000000 / max_frame_rate; // in us
+            control_list.set(libcamera::controls::FrameDurationLimits, libcamera::Span<const int64_t, 2>({frame_time, frame_time}));
+        }
+
         if (option.Get("crop").IsObject())
         {
-            auto crop = option.Get("crop").As<Napi::Object>();
-            worker->setCrop(crop.Get("roi_x").As<Napi::Number>().FloatValue(), crop.Get("roi_y").As<Napi::Number>().FloatValue(), crop.Get("roi_width").As<Napi::Number>().FloatValue(),
-                            crop.Get("roi_height").As<Napi::Number>().FloatValue());
+            auto _crop = option.Get("crop").As<Napi::Object>();
+            this->crop.roi_x = _crop.Get("roi_x").As<Napi::Number>().FloatValue();
+            this->crop.roi_y = _crop.Get("roi_y").As<Napi::Number>().FloatValue();
+            this->crop.roi_width = _crop.Get("roi_width").As<Napi::Number>().FloatValue();
+            this->crop.roi_height = _crop.Get("roi_height").As<Napi::Number>().FloatValue();
+            auto sensor_area = camera->properties().get(libcamera::properties::ScalerCropMaximum);
+            int x = this->crop.roi_x * sensor_area->width;
+            int y = this->crop.roi_y * sensor_area->height;
+            int w = this->crop.roi_width * sensor_area->width;
+            int h = this->crop.roi_height * sensor_area->height;
+            libcamera::Rectangle crop(x, y, w, h);
+            crop.translateBy(sensor_area->topLeft());
+            control_list.set(libcamera::controls::ScalerCrop, crop);
         }
         return Napi::Number::New(info.Env(), 0);
     }
 
-    Napi::Value start(const Napi::CallbackInfo &info)
-    {
-        std::cout << "start camera" << std::endl;
-        auto ret = worker->start();
-        if (!queued)
-        {
-            std::cout << "queue worker" << std::endl;
-            worker->Queue();
-            queued = true;
-        }
-
-        return Napi::Number::New(info.Env(), ret);
-    }
-
     Napi::Value queueRequest(const Napi::CallbackInfo &info)
     {
-        worker->queueRequest();
+        if (state != Running)
+        {
+            return Napi::Number::New(info.Env(), -1);
+        }
+        if (requests_deque.size())
+        {
+            auto req = requests_deque.front();
+            requests_deque.pop_front();
+            camera->queueRequest(req);
+        }
         return Napi::Number::New(info.Env(), 0);
     }
 
@@ -131,24 +355,18 @@ class Camera : public Napi::ObjectWrap<Camera>
 
     Napi::Value stop(const Napi::CallbackInfo &info)
     {
-        if (worker)
-        {
-            worker->StopCamera();
-        }
-        // worker = new CameraWorker(info, camera);
-        // worker->SuppressDestruct();
-
+        state = Stopping;
+        camera->stop();
+        state = Configured;
+        worker->stop();
+        worker = nullptr;
         return Napi::Boolean::New(info.Env(), true);
     }
 
     Napi::Value release(const Napi::CallbackInfo &info)
     {
-        if (worker)
-        {
-            worker->Release();
-        }
-        // worker = new CameraWorker(info, camera);
-        // worker->SuppressDestruct();
+        camera->release();
+        state = Available;
 
         return Napi::Boolean::New(info.Env(), true);
     }
@@ -156,7 +374,7 @@ class Camera : public Napi::ObjectWrap<Camera>
     Napi::Value setMaxFrameRate(const Napi::CallbackInfo &info)
     {
         auto rate = info[0].As<Napi::Number>().FloatValue();
-        worker->setMaxFrameRate(rate);
+        // worker->setMaxFrameRate(rate);
         return Napi::Boolean::New(info.Env(), true);
     }
 
@@ -172,7 +390,7 @@ class Camera : public Napi::ObjectWrap<Camera>
                                               InstanceMethod<&Camera::stop>("stop", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
                                               InstanceMethod<&Camera::createStreams>("createStreams", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
                                               InstanceMethod<&Camera::getAvailableControls>("getAvailableControls", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
-                                              InstanceMethod<&Camera::setMaxFrameRate>("setMaxFrameRate", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
+                                              //   InstanceMethod<&Camera::setMaxFrameRate>("setMaxFrameRate", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
                                               InstanceMethod<&Camera::release>("release", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
                                           });
         *constructor = Napi::Persistent(func);

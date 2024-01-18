@@ -53,7 +53,12 @@ class CameraWorker : public AsyncProgressQueueWorker<WorkerType>
     ~CameraWorker()
     {
         std::cout << "camera worker destroyed" << std::endl;
+        clean();
         delete dma_heap_;
+    }
+
+    void clean()
+    {
         streams.clear();
         stream_config_map.clear();
         for (auto &a : stream_config_map)
@@ -77,27 +82,7 @@ class CameraWorker : public AsyncProgressQueueWorker<WorkerType>
 
     Napi::Array createStreams(const Napi::CallbackInfo &info)
     {
-
-        streams.clear();
-        stream_config_map.clear();
-        for (auto &a : stream_config_map)
-        {
-            delete a.second;
-        }
-        for (auto &request : requests)
-        {
-            for (auto const &buffer_map : request->buffers())
-            {
-                delete buffer_map.second;
-            }
-            // request->buffers().clear();
-        }
-        requests.clear();
-
-        requests_deque.clear();
-        wait_deque.clear();
-        camera->requestCompleted.disconnect();
-
+        clean();
         Napi::Array optionList = info[0].As<Napi::Array>();
         std::vector<libcamera::StreamRole> stream_roles(optionList.Length());
         for (int i = 0; i < optionList.Length(); i++)
@@ -306,7 +291,6 @@ class CameraWorker : public AsyncProgressQueueWorker<WorkerType>
         stopped = true;
         state = Stopping;
         camera->stop();
-
         state = Configured;
     }
 
@@ -357,6 +341,7 @@ class CameraWorker : public AsyncProgressQueueWorker<WorkerType>
         while (wait_deque.size())
         {
             auto request = wait_deque.front();
+            std::cout << "metadata size: " << request->metadata().size() << std::endl;
             wait_deque.pop_front();
             auto req_addr = Napi::BigInt::New(Env(), reinterpret_cast<uint64_t>(request));
             for (auto &pair : request->buffers())
