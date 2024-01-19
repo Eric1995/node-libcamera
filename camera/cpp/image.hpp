@@ -10,7 +10,6 @@
 #include <string>
 #include <sys/mman.h>
 
-// #include "dng_writer.h"
 #include "image/image.hpp"
 #include "stream.hpp"
 #include "util.hpp"
@@ -20,8 +19,8 @@ using WorkerType = void *;
 class SaveWorker : public AsyncWorker
 {
   public:
-    SaveWorker(Function &callback, uint8_t _type, std::string _filename, uint32_t _frame_size, libcamera::FrameBuffer *_buffer, libcamera::ControlList *_metadata, libcamera::Stream *_stream)
-        : AsyncWorker(callback), type(_type), filename(_filename), frame_size(_frame_size), buffer(_buffer), metadata(_metadata), stream(_stream)
+    SaveWorker(Function &callback, uint8_t _type, std::string _filename, uint32_t _frame_size, uint8_t *_plane_data, libcamera::ControlList *_metadata, libcamera::Stream *_stream)
+        : AsyncWorker(callback), type(_type), filename(_filename), frame_size(_frame_size), plane_data(_plane_data), metadata(_metadata), stream(_stream)
     {
     }
     ~SaveWorker()
@@ -30,10 +29,12 @@ class SaveWorker : public AsyncWorker
     void Execute() override
     {
         auto file_name = filename;
-        auto plane = buffer->planes()[0];
+        // auto plane = buffer->planes()[0];
 
-        void *memory = mmap(NULL, frame_size, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), 0);
-        auto data = libcamera::Span<uint8_t>(static_cast<uint8_t *>(memory), frame_size);
+        // void *memory = mmap(NULL, frame_size, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), 0);
+        // uint8_t* copy_mem = new uint8_t[frame_size];
+        // fast_memcpy(copy_mem, memory, frame_size);
+        auto data = libcamera::Span<uint8_t>(plane_data, frame_size);
         std::vector vec{data};
         StreamInfo stream_info;
         stream_info.width = stream->configuration().size.width;
@@ -55,6 +56,7 @@ class SaveWorker : public AsyncWorker
         {
             yuv_save(vec, stream_info, file_name, nullptr);
         }
+        delete [] plane_data;
         delete options;
     }
     void OnOK() override
@@ -65,7 +67,7 @@ class SaveWorker : public AsyncWorker
 
   private:
     uint8_t type;
-    libcamera::FrameBuffer *buffer;
+    uint8_t *plane_data;
     libcamera::ControlList *metadata;
     std::string filename;
     uint32_t frame_size;
@@ -82,7 +84,7 @@ class Image : public Napi::ObjectWrap<Image>
     uint32_t frame_size;
     libcamera::Stream *stream;
     libcamera::FrameBuffer *buffer;
-    stream_config *s_config;
+    // stream_config *s_config;
     libcamera::ControlList *metadata;
     uint8_t data_format = 0;
 
@@ -119,7 +121,7 @@ class Image : public Napi::ObjectWrap<Image>
 
     Napi::Value getData(const Napi::CallbackInfo &info)
     {
-        if (s_config->data_format == 0)
+        if (data_format == 0)
         {
             uint8_t *data = new uint8_t[stream->configuration().frameSize];
             void *memory = mmap(NULL, stream->configuration().frameSize, PROT_READ | PROT_WRITE, MAP_SHARED, buffer->planes()[0].fd.get(), 0);
@@ -158,24 +160,12 @@ class Image : public Napi::ObjectWrap<Image>
     {
         auto file_name = info[0].As<Napi::String>().Utf8Value();
         Function cb = info[1].As<Function>();
-        auto wk = new SaveWorker(cb, 1, file_name, frame_size, buffer, metadata, stream);
+        auto plane = buffer->planes()[0];
+        void *memory = mmap(NULL, frame_size, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), 0);
+        uint8_t* copy_mem = new uint8_t[frame_size];
+        fast_memcpy(copy_mem, memory, frame_size);
+        auto wk = new SaveWorker(cb, 1, file_name, frame_size, copy_mem, metadata, stream);
         wk->Queue();
-        // auto plane = buffer->planes()[0];
-
-        // void *memory = mmap(NULL, frame_size, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), 0);
-        // auto data = libcamera::Span<uint8_t>(static_cast<uint8_t *>(memory), frame_size);
-        // std::vector vec{data};
-        // StreamInfo stream_info;
-        // stream_info.width = stream->configuration().size.width;
-        // stream_info.height = stream->configuration().size.height;
-        // stream_info.stride = stream->configuration().stride;
-        // stream_info.pixel_format = stream->configuration().pixelFormat;
-        // stream_info.colour_space = stream->configuration().colorSpace;
-        // dng_save(vec, stream_info, *metadata, file_name, "picam", nullptr);
-
-        // void *memory = mmap(NULL, plane.length, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), 0);
-        // DNGWriter::write(file_name.c_str(), camera, stream->configuration(), request->controls(), buffer, memory);
-        // return Napi::Number::New(info.Env(), frame_size);
         return info.Env().Undefined();
     }
 
@@ -183,7 +173,11 @@ class Image : public Napi::ObjectWrap<Image>
     {
         auto file_name = info[0].As<Napi::String>().Utf8Value();
         Function cb = info[1].As<Function>();
-        auto wk = new SaveWorker(cb, 2, file_name, frame_size, buffer, metadata, stream);
+        auto plane = buffer->planes()[0];
+        void *memory = mmap(NULL, frame_size, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), 0);
+        uint8_t* copy_mem = new uint8_t[frame_size];
+        fast_memcpy(copy_mem, memory, frame_size);
+        auto wk = new SaveWorker(cb, 2, file_name, frame_size, copy_mem, metadata, stream);
         wk->Queue();
         return info.Env().Undefined();
     }
