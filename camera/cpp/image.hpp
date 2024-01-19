@@ -29,11 +29,6 @@ class SaveWorker : public AsyncWorker
     void Execute() override
     {
         auto file_name = filename;
-        // auto plane = buffer->planes()[0];
-
-        // void *memory = mmap(NULL, frame_size, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), 0);
-        // uint8_t* copy_mem = new uint8_t[frame_size];
-        // fast_memcpy(copy_mem, memory, frame_size);
         auto data = libcamera::Span<uint8_t>(plane_data, frame_size);
         std::vector vec{data};
         StreamInfo stream_info;
@@ -156,28 +151,17 @@ class Image : public Napi::ObjectWrap<Image>
         return Napi::Number::New(info.Env(), stream->configuration().pixelFormat.fourcc());
     }
 
-    Napi::Value toDNG(const Napi::CallbackInfo &info)
+    Napi::Value save(const Napi::CallbackInfo &info)
     {
-        auto file_name = info[0].As<Napi::String>().Utf8Value();
+        auto option = info[0].As<Napi::Object>();
+        auto file_name = option.Get("file").As<Napi::String>().ToString();
+        auto type = option.Get("type").As<Napi::Number>().Uint32Value();
         Function cb = info[1].As<Function>();
         auto plane = buffer->planes()[0];
         void *memory = mmap(NULL, frame_size, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), 0);
         uint8_t* copy_mem = new uint8_t[frame_size];
         fast_memcpy(copy_mem, memory, frame_size);
-        auto wk = new SaveWorker(cb, 1, file_name, frame_size, copy_mem, metadata, stream);
-        wk->Queue();
-        return info.Env().Undefined();
-    }
-
-    Napi::Value toJPEG(const Napi::CallbackInfo &info)
-    {
-        auto file_name = info[0].As<Napi::String>().Utf8Value();
-        Function cb = info[1].As<Function>();
-        auto plane = buffer->planes()[0];
-        void *memory = mmap(NULL, frame_size, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), 0);
-        uint8_t* copy_mem = new uint8_t[frame_size];
-        fast_memcpy(copy_mem, memory, frame_size);
-        auto wk = new SaveWorker(cb, 2, file_name, frame_size, copy_mem, metadata, stream);
+        auto wk = new SaveWorker(cb, type, file_name, frame_size, copy_mem, metadata, stream);
         wk->Queue();
         return info.Env().Undefined();
     }
@@ -193,8 +177,7 @@ class Image : public Napi::ObjectWrap<Image>
                                               InstanceAccessor<&Image::getStride>("stride", static_cast<napi_property_attributes>(napi_enumerable)),
                                               InstanceAccessor<&Image::getPixelFormat>("pixelFormat", static_cast<napi_property_attributes>(napi_enumerable)),
                                               InstanceAccessor<&Image::getPixelFormatFourcc>("pixelFormatFourcc", static_cast<napi_property_attributes>(napi_enumerable)),
-                                              InstanceMethod<&Image::toDNG>("toDNG", static_cast<napi_property_attributes>(napi_enumerable)),
-                                              InstanceMethod<&Image::toJPEG>("toJPEG", static_cast<napi_property_attributes>(napi_enumerable)),
+                                              InstanceMethod<&Image::save>("save", static_cast<napi_property_attributes>(napi_enumerable)),
                                           });
         *constructor = Napi::Persistent(func);
         exports.Set("Image", func);
