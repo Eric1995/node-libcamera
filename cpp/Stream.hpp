@@ -85,6 +85,7 @@ class Stream : public Napi::ObjectWrap<Stream>
         if (option.Has("data_output_type") && option.Get("data_output_type").IsNumber())
         {
             data_format = option.Get("data_output_type").As<Napi::Number>().Uint32Value();
+            stream_config_map[index]->data_format = data_format;
         }
 
         return Napi::Number::New(info.Env(), 0);

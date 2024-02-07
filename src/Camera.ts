@@ -2,34 +2,38 @@ import Stream from "./Stream";
 import type { RawCamera } from "./types";
 
 class Camera {
-    camera: RawCamera;
+    private camera: RawCamera;
     constructor(_camera: RawCamera) {
         this.camera = _camera;
     }
 
-    getInfo() {
+    public getInfo() {
         return this.camera.getInfo();
     }
 
-    config(option: Parameters<RawCamera['config']>[0]) {
+    public config(option: Parameters<RawCamera['config']>[0]) {
         return this.camera.config(option);
     }
 
-    createStreams(option: Parameters<RawCamera['createStreams']>[0]) {
+    public createStreams(option: Parameters<RawCamera['createStreams']>[0]) {
         const streams =  this.camera.createStreams(option);
         return streams.map(s => new Stream(s));
     }
 
-    start() {
+    public start() {
         this.camera.start();
     }
 
-    stop() {
+    public stop() {
         this.camera.stop();
     }
 
-    release() {
+    public release() {
         this.camera.release();
+    }
+
+    public queueRequest() {
+        return this.camera.queueRequest();
     }
 }
 

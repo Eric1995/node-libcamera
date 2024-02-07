@@ -2,7 +2,7 @@ import Image from './Image';
 import type { RawCameraStream } from './types';
 
 class Stream {
-  stream: RawCameraStream;
+  private stream: RawCameraStream;
   constructor(_stream: RawCameraStream) {
     this.stream = _stream;
   }
@@ -41,7 +41,14 @@ class Stream {
 
   public config(
     option: Omit<Parameters<RawCameraStream['configStream']>[0], 'onImageData' | 'data_output_type'> & {
-      dataOutputType: 0 | 1;
+      /**
+       * @description 
+       * data output format    
+       * 0: fd and buffer;  
+       * 1: fd only;  
+       * @default 1
+       */
+      dataOutputType?: 0 | 1;
       onImageData: (err: unknown, ok: boolean, image: Image) => void;
     },
   ) {

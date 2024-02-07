@@ -9,8 +9,8 @@ const { CameraManager: _CameraManager } = require('../build/Release/camera.node'
 };
 
 class CameraManager {
-  cm: RawCameraManager;
-  cameras: Camera[] = [];
+  private cm: RawCameraManager;
+  public cameras: Camera[] = [];
   constructor() {
     this.cameras = [];
     this.cm = new _CameraManager();

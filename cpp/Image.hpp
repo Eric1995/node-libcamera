@@ -10,8 +10,8 @@
 #include <string>
 #include <sys/mman.h>
 
-#include "image/image.hpp"
 #include "Stream.hpp"
+#include "image/image.hpp"
 #include "utils/util.hpp"
 
 using WorkerType = void *;
@@ -51,7 +51,7 @@ class SaveWorker : public AsyncWorker
         {
             yuv_save(vec, stream_info, file_name, nullptr);
         }
-        delete [] plane_data;
+        delete[] plane_data;
         delete options;
     }
     void OnOK() override
@@ -81,7 +81,9 @@ class Image : public Napi::ObjectWrap<Image>
     libcamera::FrameBuffer *buffer;
     // stream_config *s_config;
     libcamera::ControlList *metadata;
-    uint8_t data_format = 0;
+    // uint8_t data_format = 0;
+    void *memory = nullptr;
+    uint8_t *data = nullptr;
 
     Image(const Napi::CallbackInfo &info) : Napi::ObjectWrap<Image>(info)
     {
@@ -89,7 +91,7 @@ class Image : public Napi::ObjectWrap<Image>
         // camera = reinterpret_cast<libcamera::Camera *>(info[0].As<Napi::BigInt>().Int64Value(&lossless));
         stream = reinterpret_cast<libcamera::Stream *>(info[0].As<Napi::BigInt>().Int64Value(&lossless));
         request = reinterpret_cast<libcamera::Request *>(info[1].As<Napi::BigInt>().Int64Value(&lossless));
-        data_format = info[2].As<Napi::Number>().Uint32Value();
+        // data_format = info[2].As<Napi::Number>().Uint32Value();
         metadata = new libcamera::ControlList(request->metadata());
         // request status is COMPLETE
         const std::map<const libcamera::Stream *, libcamera::FrameBuffer *> &buffers = request->buffers();
@@ -102,6 +104,7 @@ class Image : public Napi::ObjectWrap<Image>
     ~Image()
     {
         delete metadata;
+        delete[] data;
     }
 
     Napi::Value getFd(const Napi::CallbackInfo &info)
@@ -116,19 +119,22 @@ class Image : public Napi::ObjectWrap<Image>
 
     Napi::Value getData(const Napi::CallbackInfo &info)
     {
-        if (data_format == 0)
+        std::cout << "get image yuv data" << std::endl;
+        if (memory != nullptr && data != nullptr)
         {
-            uint8_t *data = new uint8_t[stream->configuration().frameSize];
-            void *memory = mmap(NULL, stream->configuration().frameSize, PROT_READ | PROT_WRITE, MAP_SHARED, buffer->planes()[0].fd.get(), 0);
-            if (memory == (void *)-1)
-            {
-                printf("mmap error : %d-%s. \r\n", errno, strerror(errno));
-            }
-            fast_memcpy(data, memory, stream->configuration().frameSize);
-            Napi::ArrayBuffer buf = Napi::ArrayBuffer::New(info.Env(), data, stream->configuration().frameSize, [](Napi::Env env, void *arg) { delete[] arg; });
+            Napi::ArrayBuffer buf = Napi::ArrayBuffer::New(info.Env(), data, stream->configuration().frameSize, [](Napi::Env env, void *arg) {});
             return buf;
         }
-        return info.Env().Undefined();
+
+        memory = mmap(NULL, stream->configuration().frameSize, PROT_READ | PROT_WRITE, MAP_SHARED, buffer->planes()[0].fd.get(), 0);
+        data = new uint8_t[stream->configuration().frameSize];
+        if (memory == (void *)-1)
+        {
+            printf("mmap error : %d-%s. \r\n", errno, strerror(errno));
+        }
+        fast_memcpy(data, memory, stream->configuration().frameSize);
+        Napi::ArrayBuffer buf = Napi::ArrayBuffer::New(info.Env(), data, stream->configuration().frameSize, [](Napi::Env env, void *arg) {});
+        return buf;
     }
 
     Napi::Value getColorSpace(const Napi::CallbackInfo &info)
@@ -159,7 +165,7 @@ class Image : public Napi::ObjectWrap<Image>
         Function cb = info[1].As<Function>();
         auto plane = buffer->planes()[0];
         void *memory = mmap(NULL, frame_size, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), 0);
-        uint8_t* copy_mem = new uint8_t[frame_size];
+        uint8_t *copy_mem = new uint8_t[frame_size];
         fast_memcpy(copy_mem, memory, frame_size);
         auto wk = new SaveWorker(cb, type, file_name, frame_size, copy_mem, metadata, stream);
         wk->Queue();
@@ -172,7 +178,7 @@ class Image : public Napi::ObjectWrap<Image>
                                           {
                                               InstanceAccessor<&Image::getFd>("fd", static_cast<napi_property_attributes>(napi_enumerable)),
                                               InstanceAccessor<&Image::getFrameSize>("frameSize", static_cast<napi_property_attributes>(napi_enumerable)),
-                                              InstanceAccessor<&Image::getData>("data", static_cast<napi_property_attributes>(napi_enumerable)),
+                                              InstanceMethod<&Image::getData>("getData", static_cast<napi_property_attributes>(napi_enumerable)),
                                               InstanceAccessor<&Image::getColorSpace>("colorSpace", static_cast<napi_property_attributes>(napi_enumerable)),
                                               InstanceAccessor<&Image::getStride>("stride", static_cast<napi_property_attributes>(napi_enumerable)),
                                               InstanceAccessor<&Image::getPixelFormat>("pixelFormat", static_cast<napi_property_attributes>(napi_enumerable)),

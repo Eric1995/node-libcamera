@@ -63,12 +63,24 @@ export interface ControlList {
 export interface RawCameraImage {
   fd: number;
   frameSize: number;
-  data: ArrayBuffer | undefined;
+  getData: () => ArrayBuffer;
   colorSpace: string;
   stride: number;
   pixelFormat: PixelFormat;
   pixelFormatFourcc: number;
-  save: (option: { file: string; type: 1 | 2 | 3 }, callback?: () => void) => void;
+  save: (
+    option: {
+      file: string;
+      /**
+       * @description
+       * 1: save as DNG;
+       * 2: save as JPEG;
+       * 3: save as YUV;
+       */
+      type: 1 | 2 | 3;
+    },
+    callback?: () => void,
+  ) => void;
 }
 
 export interface RawCamera {
@@ -141,9 +153,5 @@ export interface RawCameraStream {
   width: number;
   height: number;
   streamIndex: number;
-  configStream: (option: {
-    onImageData?: (err: unknown, ok: boolean, image: RawCameraImage) => void;
-    // auto_queue_request?: boolean;
-    data_output_type?: 0 | 1;
-  }) => number;
+  configStream: (option: { onImageData?: (err: unknown, ok: boolean, image: RawCameraImage) => void }) => number;
 }

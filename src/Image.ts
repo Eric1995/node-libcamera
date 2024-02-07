@@ -1,7 +1,7 @@
 import type { RawCameraImage } from './types';
 
 class Image {
-  image: RawCameraImage;
+  private image: RawCameraImage;
   constructor(_image: RawCameraImage) {
     this.image = _image;
   }
@@ -10,8 +10,8 @@ class Image {
     return this.image.fd;
   }
 
-  public get data() {
-    return this.image.data;
+  public getData() {
+    return this.image.getData();
   }
 
   public get stride() {
