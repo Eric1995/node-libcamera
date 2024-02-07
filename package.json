@@ -8,15 +8,11 @@
   "types": "dist/es/index.d.ts",
   "typings": "dist/es/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "esbuild": "tsx ./esbuild.config.ts",
     "configure": "node-gyp configure --arch=arm64",
-    "build": "node-gyp build --arch=arm64 && ./env.sh",
+    "build": "node-gyp build --arch=arm64",
     "configure32": "node-gyp configure --arch=arm",
-    "build32": "node-gyp build --arch=arm && ./env.sh",
-    "all": "node src/index.mjs",
-    "camera": "node src/camera.js",
-    "start": "tsx ./example/index.ts"
+    "build32": "node-gyp build --arch=arm && ./env.sh"
   },
   "exports": {
     ".": {

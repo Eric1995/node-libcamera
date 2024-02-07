@@ -7,9 +7,7 @@
                 "<!@(node -p \"require('node-addon-api').include\")",
                 "/usr/local/include/libcamera",
                 "/usr/include/libcamera",
-                "/home/eric/Dev/node-libcamera/include",
-                "/usr/aarch64-linux-gnu/include",
-                "/usr/aarch64-linux-gnu/include"
+                "/usr/include/aarch64-linux-gnu"
             ],
             "dependencies": [
                 "<!@(node -p \"require('node-addon-api').gyp\")"
