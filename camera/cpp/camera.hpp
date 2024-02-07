@@ -16,6 +16,19 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+static const std::map<int, std::string> cfa_map = {
+    {libcamera::properties::draft::ColorFilterArrangementEnum::RGGB, "RGGB"}, {libcamera::properties::draft::ColorFilterArrangementEnum::GRBG, "GRBG"},
+    {libcamera::properties::draft::ColorFilterArrangementEnum::GBRG, "GBRG"}, {libcamera::properties::draft::ColorFilterArrangementEnum::RGB, "RGB"},
+    {libcamera::properties::draft::ColorFilterArrangementEnum::MONO, "MONO"},
+};
+
+static const std::map<libcamera::PixelFormat, unsigned int> bayer_formats = {
+    {libcamera::formats::SRGGB10_CSI2P, 10}, {libcamera::formats::SGRBG10_CSI2P, 10}, {libcamera::formats::SBGGR10_CSI2P, 10}, {libcamera::formats::R10_CSI2P, 10},
+    {libcamera::formats::SGBRG10_CSI2P, 10}, {libcamera::formats::SRGGB12_CSI2P, 12}, {libcamera::formats::SGRBG12_CSI2P, 12}, {libcamera::formats::SBGGR12_CSI2P, 12},
+    {libcamera::formats::SGBRG12_CSI2P, 12}, {libcamera::formats::SRGGB16, 16},       {libcamera::formats::SGRBG16, 16},       {libcamera::formats::SBGGR16, 16},
+    {libcamera::formats::SGBRG16, 16},
+};
+
 libcamera::CameraManager cm;
 
 struct crop_t
@@ -118,6 +131,58 @@ class Camera : public Napi::ObjectWrap<Camera>
         auto area = camera->properties().get(libcamera::properties::PixelArrayActiveAreas);
         a.Set("width", (*area)[0].size().width);
         a.Set("height", (*area)[0].size().height);
+        auto model = *camera->properties().get(libcamera::properties::Model);
+        a.Set("model", model);
+        auto config = camera->generateConfiguration({libcamera::StreamRole::Raw});
+        const libcamera::StreamFormats &formats = config->at(0).formats();
+        unsigned int bits = 0;
+        for (const auto &pix : formats.pixelformats())
+        {
+            const auto &b = bayer_formats.find(pix);
+            if (b != bayer_formats.end() && b->second > bits)
+                bits = b->second;
+        }
+        if (bits)
+        {
+            a.Set("bit", bits);
+        }
+        auto cfa = camera->properties().get(libcamera::properties::draft::ColorFilterArrangement);
+        if (cfa && cfa_map.count(*cfa))
+        {
+            a.Set("colorFilterArrangement", cfa_map.at(*cfa));
+        }
+        camera->acquire();
+
+        // const libcamera::StreamFormats &formats = config->at(0).formats();
+        Napi::Object modesObj = Napi::Object::New(info.Env());
+        for (const auto &pix : formats.pixelformats())
+        {
+            Napi::Array modes = Napi::Array::New(info.Env());
+            for (const auto &size : formats.sizes(pix))
+            {
+                Napi::Object mode = Napi::Object::New(info.Env());
+                mode.Set("size", size.toString());
+                mode.Set("pix", pix.toString());
+                modes[modes.Length()] = mode;
+                config->at(0).size = size;
+                config->at(0).pixelFormat = pix;
+                config->sensorConfig = libcamera::SensorConfiguration();
+                config->sensorConfig->outputSize = size;
+                std::string fmt = pix.toString();
+                unsigned int mode_depth = fmt.find("8") != std::string::npos ? 8 : fmt.find("10") != std::string::npos ? 10 : fmt.find("12") != std::string::npos ? 12 : 16;
+                config->sensorConfig->bitDepth = mode_depth;
+                config->validate();
+                camera->configure(config.get());
+                auto fd_ctrl = camera->controls().find(&libcamera::controls::FrameDurationLimits);
+                auto crop_ctrl = camera->properties().get(libcamera::properties::ScalerCropMaximum);
+                double fps = fd_ctrl == camera->controls().end() ? NAN : (1e6 / fd_ctrl->second.min().get<int64_t>());
+                mode.Set("crop", crop_ctrl->toString());
+                mode.Set("framerate", fps);
+            }
+            modesObj.Set(pix.toString(), modes);
+        }
+        a.Set("modes", modesObj);
+        camera->release();
         return a;
     };
 
@@ -132,26 +197,22 @@ class Camera : public Napi::ObjectWrap<Camera>
             Napi::Object option = optionList.Get(i).As<Napi::Object>();
             if (option.Has("role"))
             {
-                auto roleValue = option.Get("role");
-                if (roleValue.IsString())
+                auto role = option.Get("role").As<Napi::Number>().Int32Value();
+                if (role == 0)
                 {
-                    auto role = roleValue.As<Napi::String>().Utf8Value();
-                    if (role == "Raw")
-                    {
-                        stream_roles.push_back(libcamera::StreamRole::Raw);
-                    }
-                    if (role == "VideoRecording")
-                    {
-                        stream_roles.push_back(libcamera::StreamRole::VideoRecording);
-                    }
-                    if (role == "StillCapture")
-                    {
-                        stream_roles.push_back(libcamera::StreamRole::StillCapture);
-                    }
-                    if (role == "Viewfinder")
-                    {
-                        stream_roles.push_back(libcamera::StreamRole::Viewfinder);
-                    }
+                    stream_roles.push_back(libcamera::StreamRole::Raw);
+                }
+                if (role == 2)
+                {
+                    stream_roles.push_back(libcamera::StreamRole::VideoRecording);
+                }
+                if (role == 1)
+                {
+                    stream_roles.push_back(libcamera::StreamRole::StillCapture);
+                }
+                if (role == 3)
+                {
+                    stream_roles.push_back(libcamera::StreamRole::Viewfinder);
                 }
             }
         }
@@ -286,10 +347,64 @@ class Camera : public Napi::ObjectWrap<Camera>
             front->reuse(libcamera::Request::ReuseBuffers);
             if (state == Running && auto_queue_request)
             {
+                front->controls().merge(control_list);
                 camera->queueRequest(front);
                 requests_deque.pop_front();
             }
         }
+    }
+
+    Napi::Value setControl(const Napi::CallbackInfo &info)
+    {
+        auto option = info[0].As<Napi::Object>();
+        if (option.Get("crop").IsObject())
+        {
+            auto _crop = option.Get("crop").As<Napi::Object>();
+            auto sensor_area = camera->properties().get(libcamera::properties::ScalerCropMaximum);
+            float roi_x = _crop.Get("roi_x").As<Napi::Number>().FloatValue();
+            float roi_y = _crop.Get("roi_y").As<Napi::Number>().FloatValue();
+            float roi_width = _crop.Get("roi_width").As<Napi::Number>().FloatValue();
+            float roi_height = _crop.Get("roi_height").As<Napi::Number>().FloatValue();
+            int x = roi_x * sensor_area->width;
+            int y = crop.roi_y * sensor_area->height;
+            int w = crop.roi_width * sensor_area->width;
+            int h = crop.roi_height * sensor_area->height;
+            libcamera::Rectangle crop(x, y, w, h);
+            crop.translateBy(sensor_area->topLeft());
+            control_list.set(libcamera::controls::ScalerCrop, crop);
+        }
+        if (option.Get("ExposureTime").IsNumber())
+            control_list.set(libcamera::controls::ExposureTime, option.Get("ExposureTime").As<Napi::Number>().Int64Value());
+        if (option.Get("AnalogueGain").IsNumber())
+            control_list.set(libcamera::controls::AnalogueGain, option.Get("AnalogueGain").As<Napi::Number>().FloatValue());
+        if (option.Get("AeMeteringMode").IsNumber())
+            control_list.set(libcamera::controls::AeMeteringMode, option.Get("AeMeteringMode").As<Napi::Number>().Int32Value());
+        if (option.Get("AeExposureMode").IsNumber())
+            control_list.set(libcamera::controls::AeExposureMode, option.Get("AeExposureMode").As<Napi::Number>().Int32Value());
+        if (option.Get("ExposureValue").IsNumber())
+            control_list.set(libcamera::controls::ExposureValue, option.Get("ExposureValue").As<Napi::Number>().FloatValue());
+        if (option.Get("AwbMode").IsNumber())
+            control_list.set(libcamera::controls::AwbMode, option.Get("AwbMode").As<Napi::Number>().Int32Value());
+        if (option.Get("Brightness").IsNumber())
+            control_list.set(libcamera::controls::Brightness, option.Get("Brightness").As<Napi::Number>().FloatValue());
+        if (option.Get("Contrast").IsNumber())
+            control_list.set(libcamera::controls::Contrast, option.Get("Contrast").As<Napi::Number>().FloatValue());
+        if (option.Get("Saturation").IsNumber())
+            control_list.set(libcamera::controls::Saturation, option.Get("Saturation").As<Napi::Number>().FloatValue());
+        if (option.Get("Sharpness").IsNumber())
+            control_list.set(libcamera::controls::Sharpness, option.Get("Sharpness").As<Napi::Number>().FloatValue());
+        if (option.Get("AfRange").IsNumber())
+            control_list.set(libcamera::controls::AfRange, option.Get("AfRange").As<Napi::Number>().Int32Value());
+        if (option.Get("AfSpeed").IsNumber())
+            control_list.set(libcamera::controls::AfSpeed, option.Get("AfSpeed").As<Napi::Number>().Int32Value());
+        if (option.Get("LensPosition").IsNumber())
+            control_list.set(libcamera::controls::LensPosition, option.Get("LensPosition").As<Napi::Number>().FloatValue());
+        if (option.Get("AfMode").IsNumber())
+            control_list.set(libcamera::controls::AfMode, option.Get("AfMode").As<Napi::Number>().Int32Value());
+        if (option.Get("AfTrigger").IsNumber())
+            control_list.set(libcamera::controls::AfTrigger, option.Get("AfTrigger").As<Napi::Number>().Int32Value());
+
+        return info.Env().Undefined();
     }
 
     Napi::Value config(const Napi::CallbackInfo &info)
@@ -332,11 +447,24 @@ class Camera : public Napi::ObjectWrap<Camera>
         {
             return Napi::Number::New(info.Env(), -1);
         }
-        if (requests_deque.size())
+        if (requests_deque.size() < requests.size())
         {
-            auto req = requests_deque.front();
+            // std::cout << "queue request: " << requests_deque.size() << std::endl;
+            auto req = requests[requests_deque.size()].get();
+            if (req->status() == libcamera::Request::Status::RequestPending)
+            {
+                req->controls().merge(control_list);
+                camera->queueRequest(req);
+            }
+            // requests_deque.pop_front();
+        }
+        else
+        {
+            auto front = requests_deque.front();
+            front->reuse(libcamera::Request::ReuseBuffers);
+            front->controls().merge(control_list);
+            camera->queueRequest(front);
             requests_deque.pop_front();
-            camera->queueRequest(req);
         }
         return Napi::Number::New(info.Env(), 0);
     }
@@ -354,6 +482,10 @@ class Camera : public Napi::ObjectWrap<Camera>
 
     Napi::Value stop(const Napi::CallbackInfo &info)
     {
+        if (state == Available || state == Stopping)
+        {
+            return Napi::Boolean::New(info.Env(), true);
+        }
         state = Stopping;
         camera->stop();
         state = Configured;
@@ -370,27 +502,20 @@ class Camera : public Napi::ObjectWrap<Camera>
         return Napi::Boolean::New(info.Env(), true);
     }
 
-    Napi::Value setMaxFrameRate(const Napi::CallbackInfo &info)
-    {
-        auto rate = info[0].As<Napi::Number>().FloatValue();
-        // worker->setMaxFrameRate(rate);
-        return Napi::Boolean::New(info.Env(), true);
-    }
-
     static Napi::Object Init(Napi::Env env, Napi::Object exports)
     {
         Napi::Function func = DefineClass(env, "Camera",
                                           {
-                                              InstanceAccessor<&Camera::getId>("id"),
-                                              InstanceMethod<&Camera::basicInfo>("getInfo", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
-                                              InstanceMethod<&Camera::start>("start", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
-                                              InstanceMethod<&Camera::queueRequest>("queueRequest", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
-                                              InstanceMethod<&Camera::config>("config", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
-                                              InstanceMethod<&Camera::stop>("stop", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
-                                              InstanceMethod<&Camera::createStreams>("createStreams", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
-                                              InstanceMethod<&Camera::getAvailableControls>("getAvailableControls", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
-                                              //   InstanceMethod<&Camera::setMaxFrameRate>("setMaxFrameRate", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
-                                              InstanceMethod<&Camera::release>("release", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
+                                              InstanceAccessor<&Camera::getId>("id", static_cast<napi_property_attributes>(napi_enumerable)),
+                                              InstanceMethod<&Camera::basicInfo>("getInfo", static_cast<napi_property_attributes>(napi_enumerable)),
+                                              InstanceMethod<&Camera::start>("start", static_cast<napi_property_attributes>(napi_enumerable)),
+                                              InstanceMethod<&Camera::queueRequest>("queueRequest", static_cast<napi_property_attributes>(napi_enumerable)),
+                                              InstanceMethod<&Camera::config>("config", static_cast<napi_property_attributes>(napi_enumerable)),
+                                              InstanceMethod<&Camera::stop>("stop", static_cast<napi_property_attributes>(napi_enumerable)),
+                                              InstanceMethod<&Camera::createStreams>("createStreams", static_cast<napi_property_attributes>(napi_enumerable)),
+                                              InstanceMethod<&Camera::getAvailableControls>("getAvailableControls", static_cast<napi_property_attributes>(napi_enumerable)),
+                                              InstanceMethod<&Camera::release>("release", static_cast<napi_property_attributes>(napi_enumerable)),
+                                              InstanceMethod<&Camera::setControl>("setControl", static_cast<napi_property_attributes>(napi_enumerable)),
                                           });
         *constructor = Napi::Persistent(func);
         exports.Set("Camera", func);
