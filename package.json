@@ -1,24 +1,51 @@
 {
-  "name": "picam",
+  "name": "node-libcamera",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "type": "module",
+  "main": "dist/lib/index.js",
+  "module": "dist/es/index.js",
+  "types": "dist/es/index.d.ts",
+  "typings": "dist/es/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "esbuild": "tsx ./esbuild.config.ts",
     "configure": "node-gyp configure --arch=arm64",
     "build": "node-gyp build --arch=arm64 && ./env.sh",
     "configure32": "node-gyp configure --arch=arm",
     "build32": "node-gyp build --arch=arm && ./env.sh",
-    "all": "node src/index.js",
-    "camera": "node src/camera.js"
+    "all": "node src/index.mjs",
+    "camera": "node src/camera.js",
+    "start": "tsx ./example/index.ts"
   },
+  "exports": {
+    ".": {
+      "import": "./dist/es/index.js",
+      "require": "./dist/lib/index.js",
+      "types": "./dist/es/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/bindings": "^1.5.5",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^20.11.16",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
     "bindings": "^1.5.0",
-    "node-addon-api": "^7.0.0",
-    "prettier": "^3.1.1"
+    "esbuild": "^0.20.0",
+    "eslint-define-config": "^2.1.0",
+    "eslint-plugin-simple-import-sort": "^10.0.0",
+    "fs-extra": "^11.2.0",
+    "node-addon-api": "^7.1.0",
+    "node-gyp": "^10.0.1",
+    "prettier": "^3.1.1",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
   }
 }
