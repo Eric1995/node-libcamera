@@ -1,5 +1,3 @@
-#include "image.hpp"
-#include "stream.hpp"
 #include <chrono>
 #include <condition_variable>
 #include <deque>
@@ -7,6 +5,9 @@
 #include <libcamera/libcamera.h>
 #include <napi.h>
 #include <thread>
+
+#include "Image.hpp"
+#include "Stream.hpp"
 
 using namespace Napi;
 

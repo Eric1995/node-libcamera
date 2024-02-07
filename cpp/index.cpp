@@ -1,9 +1,9 @@
 #include <napi.h>
 
-#include "camera.hpp"
+#include "Camera.hpp"
 #include "CameraManager.hpp"
-#include "stream.hpp"
-#include "image.hpp"
+#include "Image.hpp"
+#include "Stream.hpp"
 
 // Initialize native add-on
 Napi::Object Init(Napi::Env env, Napi::Object exports)

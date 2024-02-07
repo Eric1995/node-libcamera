@@ -11,8 +11,8 @@
 #include <sys/mman.h>
 
 #include "image/image.hpp"
-#include "stream.hpp"
-#include "util.hpp"
+#include "Stream.hpp"
+#include "utils/util.hpp"
 
 using WorkerType = void *;
 
