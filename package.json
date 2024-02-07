@@ -10,7 +10,7 @@
   "scripts": {
     "esbuild": "tsx ./esbuild.config.ts",
     "configure": "node-gyp configure --arch=arm64",
-    "build": "node-gyp build --arch=arm64",
+    "build": "node-gyp build --arch=arm64 && npm run esbuild",
     "configure32": "node-gyp configure --arch=arm",
     "build32": "node-gyp build --arch=arm && ./env.sh"
   },
