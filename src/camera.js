@@ -10,6 +10,7 @@ let store_count = 0;
 let still_count = 0;
 
 function createStoreStream() {
+  camera.stop();
   camera.config({
     autoQueueRequest: true,
     maxFrameRate: framerate,
@@ -26,6 +27,7 @@ function createStoreStream() {
       },
     },
   ]);
+  camera.start();
   // configRes.forEach((stream) => {
   //   console.dir(stream);
   //   for (const k in stream) {
@@ -45,9 +47,10 @@ function createStoreStream() {
 }
 
 function captureImage() {
+  camera.stop();
   camera.config({
-    autoQueueRequest: true,
-    maxFrameRate: 4,
+    autoQueueRequest: false,
+    // maxFrameRate: 1,
   });
   const configRes = camera.createStreams([
     {
@@ -58,7 +61,7 @@ function captureImage() {
       // pixel_format: 'YUV420',
       onImageData: () => {
         // console.log(`callback called at: ${Date.now()}`);
-        still_count++;
+        // still_count++;
       },
     },
   ]);
@@ -67,20 +70,38 @@ function captureImage() {
     data_output_type: 1,
     onImageData: (err, ok, image) => {
       if (still_count === 0) {
-        console.log(`save image to dng`);
-        image.toDNG(`./${still_count}.dng`, () => {
-          console.log('dng saved');
-        });
+        console.log(`save image to dng at: ${Date.now()}`);
+        image.save(
+          {
+            file: `/dev/shm/${still_count}.dng`,
+            type: 1,
+          },
+          () => {
+            console.log(`dng saved at: ${Date.now()}`);
+          },
+        );
+        console.log(`restart store stream at: ${Date.now()}`);
+        setTimeout(() => {
+          createStoreStream();
+        }, 20);
       }
+
       // if (still_count === 1) {
       //   console.log(`save image to jpeg`);
       //   image.toJPEG(`./${still_count}.jpeg`, () => {
       //     console.log('jpeg saved');
       //   });
       // }
+      // camera.stop();
+      // createStoreStream();
+      // camera.start();
       still_count++;
     },
   });
+  
+  camera.start();
+  camera.queueRequest();
+  // camera.queueRequest();
   // camera.start();
   // setTimeout(() => {
   //   camera.stop();
@@ -94,16 +115,16 @@ function captureImage() {
 }
 
 createStoreStream();
-camera.start();
+
 setTimeout(() => {
-  console.log(`stop camera, store count: ${store_count}, still count: ${still_count}`);
-  camera.stop();
+  // console.log(`stop camera, store count: ${store_count}, still count: ${still_count}`);
+  
   captureImage();
-  camera.start();
+  
   setTimeout(() => {
     camera.stop();
     console.log(`stop camera, store count: ${store_count}, still count: ${still_count}`);
-  }, 4000);
+  }, 6000);
   // setTimeout(() => {
   //   captureImage();
   // }, 1000);

@@ -129,7 +129,7 @@ console.log(
   `stream 1: width: ${configRes[1]?.width}, height: ${configRes[1]?.height}, stride: ${configRes[1]?.stride}, pixel format: ${configRes[1]?.pixelFormtFourcc}`,
 );
 // console.log(`stream 0 pixel format: ${configRes[0]?.pixelFormat}, stream1 pixel format: ${configRes[1]?.pixelFormat}`);
-if (configRes[10]) {
+if (configRes[0]) {
   encoder = new H264Encoder(
     {
       width: configRes[0].width,
