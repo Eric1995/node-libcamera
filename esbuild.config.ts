@@ -40,7 +40,7 @@ try {
   console.error(error.stdout.toString());
 }
 
-fs.copySync(`${outputPath}/types/src`, `${outputPath}/es`);
+fs.copySync(`${outputPath}/types`, `${outputPath}/es`);
 // fs.copySync(`${outputPath}/types/src`, `${outputPath}/lib`);
 fs.rmSync(`${outputPath}/types`, { recursive: true });
 
