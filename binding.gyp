@@ -2,12 +2,13 @@
     "targets": [
         {
             "target_name": "camera",
-            "sources": ["camera/cpp/index.cpp", "camera/cpp/dma_heaps.cpp", "camera/cpp/image/dng.cpp", "camera/cpp/image/jpeg.cpp"],
+            "sources": ["camera/cpp/index.cpp", "cpp/utils/dma_heaps.cpp", "cpp/image/dng.cpp", "cpp/image/jpeg.cpp"],
             "include_dirs": [
                 "<!@(node -p \"require('node-addon-api').include\")",
                 "/usr/local/include/libcamera",
                 "/usr/include/libcamera",
-                "/usr/include/aarch64-linux-gnu"
+                "/usr/include/aarch64-linux-gnu",
+                "./include"
             ],
             "dependencies": [
                 "<!@(node -p \"require('node-addon-api').gyp\")"
