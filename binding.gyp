@@ -2,7 +2,7 @@
     "targets": [
         {
             "target_name": "camera",
-            "sources": ["camera/cpp/index.cpp", "cpp/utils/dma_heaps.cpp", "cpp/image/dng.cpp", "cpp/image/jpeg.cpp"],
+            "sources": ["cpp/index.cpp", "cpp/utils/dma_heaps.cpp", "cpp/image/dng.cpp", "cpp/image/jpeg.cpp"],
             "include_dirs": [
                 "<!@(node -p \"require('node-addon-api').include\")",
                 "/usr/local/include/libcamera",
