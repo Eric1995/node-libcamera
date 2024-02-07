@@ -13,9 +13,6 @@ class CameraManager : public Napi::ObjectWrap<CameraManager>
     static Napi::Value CreateNewItem(const Napi::CallbackInfo &info);
     std::vector<Napi::Reference<Napi::Object>> cameras;
   private:
-    double _value;
-    Napi::Value GetValue(const Napi::CallbackInfo &info);
-    Napi::Value SetValue(const Napi::CallbackInfo &info);
     Napi::Value GetCameras(const Napi::CallbackInfo &info);
 };
 Napi::FunctionReference *CameraManager::constructor = new Napi::FunctionReference();
@@ -26,12 +23,7 @@ Napi::Object CameraManager::Init(Napi::Env env, Napi::Object exports)
     Napi::Function func =
         DefineClass(env, "CameraManager",
                     {
-                        InstanceAccessor<&CameraManager::GetValue>("value"),
                         InstanceAccessor<&CameraManager::GetCameras>("cameras"),
-                        InstanceMethod<&CameraManager::GetValue>(
-                            "GetValue", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
-                        InstanceMethod<&CameraManager::SetValue>(
-                            "SetValue", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
                         StaticMethod<&CameraManager::CreateNewItem>(
                             "CreateNewItem", static_cast<napi_property_attributes>(napi_writable | napi_configurable)),
                     });
@@ -47,8 +39,8 @@ CameraManager::CameraManager(const Napi::CallbackInfo &info) : Napi::ObjectWrap<
 {
     Napi::Env env = info.Env();
     // ...
-    Napi::Number value = info[0].As<Napi::Number>();
-    this->_value = value.DoubleValue();
+    // Napi::Number value = info[0].As<Napi::Number>();
+    // this->_value = value.DoubleValue();
     cm.start();
     auto libcameras = cm.cameras();
     uint16_t i = 0;
@@ -60,12 +52,6 @@ CameraManager::CameraManager(const Napi::CallbackInfo &info) : Napi::ObjectWrap<
         cameras.push_back(std::move(objRef));
         i++;
     }
-}
-
-Napi::Value CameraManager::GetValue(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    return Napi::Number::New(env, this->_value);
 }
 
 Napi::Value CameraManager::GetCameras(const Napi::CallbackInfo &info)
@@ -81,20 +67,11 @@ Napi::Value CameraManager::GetCameras(const Napi::CallbackInfo &info)
     return _cameras;
 }
 
-Napi::Value CameraManager::SetValue(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    // ...
-    Napi::Number value = info[0].As<Napi::Number>();
-    this->_value = value.DoubleValue();
-    return this->GetValue(info);
-}
-
 Napi::Value CameraManager::CreateNewItem(const Napi::CallbackInfo &info)
 {
     //   Napi::FunctionReference* constructor =
     //       info.Env().GetInstanceData<Napi::FunctionReference>();
-    return constructor->New({Napi::Number::New(info.Env(), 42)});
+    return constructor->New({});
 }
 
 #endif
