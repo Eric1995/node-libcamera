@@ -13,6 +13,5 @@
       "skipLibCheck": true,
       
     },
-    "include": ["src", "example", "esbuild.config.ts"],
-    "exclude": ["src/CameraManager_cjs.ts"]
+    "include": ["src"],
   }
