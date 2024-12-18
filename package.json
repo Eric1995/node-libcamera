@@ -8,9 +8,11 @@
   "types": "dist/es/index.d.ts",
   "typings": "dist/es/index.d.ts",
   "scripts": {
+    "clean": "node-gyp clean",
     "esbuild": "tsx ./esbuild.config.ts",
-    "configure": "node-gyp configure --arch=arm64",
-    "build": "node-gyp build --arch=arm64 && npm run esbuild",
+    "config_shell": "npm config set script-shell \"/bin/bash\";",
+    "configure": "npm run config_shell; source ./crosscompile.sh; node-gyp configure --arch=arm64",
+    "build": "npm run config_shell; source ./crosscompile.sh; node-gyp build --arch=arm64",
     "configure32": "node-gyp configure --arch=arm",
     "build32": "node-gyp build --arch=arm && ./env.sh"
   },
