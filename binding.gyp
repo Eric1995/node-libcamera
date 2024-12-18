@@ -14,8 +14,8 @@
                 "<!@(node -p \"require('node-addon-api').gyp\")"
             ],
             "libraries": [
-                "${PWD}/lib64/libcamera.so",
-                "${PWD}/lib64/libcamera-base.so",
+                "${PWD}/lib64/libcamera.so.0.3.2",
+                "${PWD}/lib64/libcamera-base.so.0.3.2",
                 "${PWD}/lib64/libtiff.so.6.0.0",
                 "${PWD}/lib64/libexif.so.12.3.4",
                 "${PWD}/lib64/libjpeg.so.62.3.0",
