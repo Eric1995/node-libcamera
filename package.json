@@ -31,7 +31,7 @@
   "devDependencies": {
     "@types/bindings": "^1.5.5",
     "@types/fs-extra": "^11.0.4",
-    "@types/node": "^20.11.16",
+    "@types/node": "^22.10.2",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "bindings": "^1.5.0",
@@ -39,10 +39,10 @@
     "eslint-define-config": "^2.1.0",
     "eslint-plugin-simple-import-sort": "^10.0.0",
     "fs-extra": "^11.2.0",
-    "node-addon-api": "^7.1.0",
-    "node-gyp": "^10.0.1",
+    "node-addon-api": "^8.3.0",
+    "node-gyp": "^11.0.0",
     "prettier": "^3.1.1",
-    "tsx": "^4.7.0",
-    "typescript": "^5.3.3"
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
   }
 }
