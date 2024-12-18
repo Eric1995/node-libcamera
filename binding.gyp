@@ -30,6 +30,11 @@
                 "-fpermissive",
                 "-fexceptions",
             ],  
+            "ldflags": [
+                "-nolibc",
+                "-static-libstdc++",
+                "-static-libgcc"
+            ],
             'defines': ["NAPI_CPP_EXCEPTIONS", "PI"],
         }
     ]
