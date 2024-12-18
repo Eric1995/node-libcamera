@@ -19,7 +19,8 @@ const configRes = camera.createStreams([
         role: 2,
         pixel_format: PixelFormat.YUV420,
         onImageData: (err, ok, image) => {
-            
+            if(err) console.error(err);
+            console.log(`callback called at: ${Date.now()}, OK: ${ok} size: ${image.frameSize}`);
         },
     },
 ]);

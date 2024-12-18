@@ -7,10 +7,9 @@ const args = process.argv.slice(2);
 const outputPath = 'dist';
 
 if (args.some(a => a.includes('--playground'))) {
-  console.dir('build for playground');
   esbuild.buildSync({
-    entryPoints: ['playground/camera.ts'],
-    outdir: `${outputPath}/.playground/`,
+    entryPoints: ['playground/*.ts'],
+    outdir: `${outputPath}/playground/`,
     format: 'esm',
     bundle: true,
     platform: 'node',
