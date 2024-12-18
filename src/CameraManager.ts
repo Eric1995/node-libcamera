@@ -4,7 +4,7 @@ import Camera from './Camera';
 import type { RawCameraManager, RawCameraManagerConstruction } from './types';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { CameraManager: _CameraManager } = require('../build/Release/camera.node') as {
+const { CameraManager: _CameraManager } = require('../build/Release/libcamera.node') as {
   CameraManager: RawCameraManagerConstruction;
 };
 

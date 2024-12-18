@@ -32,7 +32,7 @@ esbuild.buildSync({
   platform: 'node',
   tsconfig: './tsconfig.json',
   target: 'ESNext',
-  external: ['../build/Release/camera.node'],
+  external: ['../build/Release/libcamera.node'],
   banner: {
     js: `
 import { createRequire } from 'module';
@@ -49,7 +49,7 @@ esbuild.buildSync({
   platform: 'node',
   tsconfig: './tsconfig.json',
   target: 'ESNext',
-  external: ['../build/Release/camera.node'],
+  external: ['../build/Release/libcamera.node'],
 });
 
 try {
@@ -62,6 +62,6 @@ fs.copySync(`${outputPath}/types`, `${outputPath}/es`);
 // fs.copySync(`${outputPath}/types/src`, `${outputPath}/lib`);
 fs.rmSync(`${outputPath}/types`, { recursive: true });
 
-if (fs.existsSync('build/Release/camera.node')) {
-  fs.copySync(`build/Release/camera.node`, `${outputPath}/build/Release/camera.node`);
+if (fs.existsSync('build/Release/libcamera.node')) {
+  fs.copySync(`build/Release/libcamera.node`, `${outputPath}/build/Release/libcamera.node`);
 }

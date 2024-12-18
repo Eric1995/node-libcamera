@@ -1,7 +1,7 @@
 import { PixelFormat, type RawCameraManagerConstruction } from '../src/types';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { CameraManager } = require('../build/Release/camera.node') as {
+const { CameraManager } = require('../build/Release/libcamera.node') as {
     CameraManager: RawCameraManagerConstruction;
 };
 
