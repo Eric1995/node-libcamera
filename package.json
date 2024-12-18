@@ -8,8 +8,9 @@
   "types": "dist/es/index.d.ts",
   "typings": "dist/es/index.d.ts",
   "scripts": {
-    "clean": "node-gyp clean",
+    "clean": "node-gyp clean; rimraf ./dist",
     "esbuild": "tsx ./esbuild.config.ts",
+    "build:playground": "tsx ./esbuild.config.ts --playground",
     "config_shell": "npm config set script-shell \"/bin/bash\";",
     "configure": "npm run config_shell; source ./crosscompile.sh; node-gyp configure --arch=arm64",
     "build": "npm run config_shell; source ./crosscompile.sh; node-gyp build --arch=arm64",
@@ -24,7 +25,9 @@
     }
   },
   "files": [
-    "dist",
+    "dist/build/**/*",
+    "dist/es/**/*",
+    "dist/lib/**/*",
     "binding.gyp"
   ],
   "keywords": [],
@@ -44,6 +47,7 @@
     "node-addon-api": "^8.3.0",
     "node-gyp": "^11.0.0",
     "prettier": "^3.1.1",
+    "rimraf": "^6.0.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
