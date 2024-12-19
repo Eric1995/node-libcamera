@@ -46,6 +46,10 @@ class SaveWorker : public AsyncWorker
         {
             yuv_save(vec, stream_info, file_name, nullptr);
         }
+        if (type == 4)
+        {
+            qoi_save(vec, stream_info, file_name, nullptr);
+        }
         delete[] plane_data;
         delete options;
     }
