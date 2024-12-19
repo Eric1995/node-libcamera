@@ -38,21 +38,17 @@
                 "-fexceptions",
                 "-O1"
             ],  
-            "ldflags": [
-                "-nolibc",
-                "-static-libstdc++",
-                "-static-libgcc"
-            ],
+            
             'defines': ["NAPI_CPP_EXCEPTIONS", "PI", "QOI_IMPLEMENTATION"],
             "conditions": [
                 ['FLAG=="CROSS"', {
                     "libraries": [
-                    "${PWD}/lib64/libcamera.so.0.3.2",
-                    "${PWD}/lib64/libcamera-base.so.0.3.2",
-                    "${PWD}/lib64/libexif.so.12.3.4",
-                    "${PWD}/lib64/libjpeg.so.62.3.0",
-                    "${PWD}/lib64/libtiff.so.6.0.0",
-                    "${PWD}/lib64/libturbojpeg.so.0.4.0"
+                        "${PWD}/lib64/*",
+                    ],
+                    "ldflags": [
+                        "-nolibc",
+                        "-static-libstdc++",
+                        "-static-libgcc"
                     ],
                 }],
                 ['FLAG!="CROSS"', {
