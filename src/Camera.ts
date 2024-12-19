@@ -32,8 +32,8 @@ class Camera {
         this.camera.release();
     }
 
-    public queueRequest() {
-        return this.camera.queueRequest();
+    public sendRequest() {
+        return this.camera.sendRequest();
     }
 }
 
