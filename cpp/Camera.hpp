@@ -88,7 +88,6 @@ class Camera : public Napi::ObjectWrap<Camera>
             camera->release();
         }
         clean();
-        std::cout << "camera destroyed" << std::endl;
     }
 
     void clean()
@@ -286,18 +285,14 @@ class Camera : public Napi::ObjectWrap<Camera>
         {
             delete worker;
         }
-        auto now = millis();
         worker = new FrameWorker(info, camera.get(), &wait_deque, &napi_stream_map, &stream_index_map);
         worker->Queue();
-        now = millis();
         int ret = camera->start();
-        std::cout << "camera start cost: " << (millis() - now) << "ms" << std::endl;
         state = Running;
         requests_deque.clear();
         wait_deque.clear();
         if (auto_queue_request)
         {
-            std::cout << "start queue request at: " << millis() << std::endl;
             for (auto &req : requests)
             {
                 if (req->status() == libcamera::Request::Status::RequestPending)
@@ -330,7 +325,6 @@ class Camera : public Napi::ObjectWrap<Camera>
         }
         wait_deque.push_back(request);
         worker->notify();
-        // std::cout << "metadata size: " << request->metadata().size() << std::endl;
 
         requests_deque.push_back(request);
 
@@ -442,14 +436,12 @@ class Camera : public Napi::ObjectWrap<Camera>
         }
         if (requests_deque.size() < requests.size())
         {
-            // std::cout << "queue request: " << requests_deque.size() << std::endl;
             auto req = requests[requests_deque.size()].get();
             if (req->status() == libcamera::Request::Status::RequestPending)
             {
                 req->controls().merge(control_list);
                 camera->queueRequest(req);
             }
-            // requests_deque.pop_front();
         }
         else
         {
