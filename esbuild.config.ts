@@ -15,8 +15,15 @@ if (args.some(a => a.includes('--playground'))) {
     platform: 'node',
     tsconfig: './tsconfig.json',
     target: 'ESNext',
+    external: ['../build/Release/*.node'],
     outExtension: {
       '.js': '.mjs'
+    },
+    banner: {
+      js: `
+  import { createRequire } from 'module';
+  const require = createRequire(import.meta.url);
+      `,
     },
   });
   process.exit(1);
