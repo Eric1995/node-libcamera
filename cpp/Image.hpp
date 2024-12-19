@@ -14,8 +14,8 @@ using WorkerType = void *;
 class SaveWorker : public AsyncWorker
 {
   public:
-    SaveWorker(Function &callback, uint8_t _type, std::string _filename, uint32_t _frame_size, uint8_t *_plane_data, libcamera::ControlList *_metadata, libcamera::Stream *_stream)
-        : AsyncWorker(callback), type(_type), filename(_filename), frame_size(_frame_size), plane_data(_plane_data), metadata(_metadata), stream(_stream)
+    SaveWorker(Function &callback, uint8_t _type, std::string _filename, uint32_t _frame_size, uint8_t _quality, uint8_t *_plane_data, libcamera::ControlList *_metadata, libcamera::Stream *_stream)
+        : AsyncWorker(callback), type(_type), filename(_filename), frame_size(_frame_size), quality(_quality), plane_data(_plane_data), metadata(_metadata), stream(_stream)
     {
     }
     ~SaveWorker()
@@ -39,7 +39,7 @@ class SaveWorker : public AsyncWorker
         }
         if (type == 2)
         {
-            options->quality = 90;
+            options->quality = quality;
             jpeg_save(vec, stream_info, *metadata, file_name, "picam", options);
         }
         if (type == 3)
@@ -57,6 +57,7 @@ class SaveWorker : public AsyncWorker
 
   private:
     uint8_t type;
+    uint8_t quality;
     uint8_t *plane_data;
     libcamera::ControlList *metadata;
     std::string filename;
@@ -156,12 +157,15 @@ class Image : public Napi::ObjectWrap<Image>
         auto option = info[0].As<Napi::Object>();
         auto file_name = option.Get("file").As<Napi::String>().ToString();
         auto type = option.Get("type").As<Napi::Number>().Uint32Value();
+        uint8_t quality = 90;
+        if (option.Has("quality") && option.Get("quality").IsNumber())
+            quality = option.Get("quality").As<Napi::Number>().Uint32Value();
         Function cb = info[1].As<Function>();
         auto plane = buffer->planes()[0];
         void *memory = mmap(NULL, frame_size, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), 0);
         uint8_t *copy_mem = new uint8_t[frame_size];
         fast_memcpy(copy_mem, memory, frame_size);
-        auto wk = new SaveWorker(cb, type, file_name, frame_size, copy_mem, metadata, stream);
+        auto wk = new SaveWorker(cb, type, file_name, frame_size, quality, copy_mem, metadata, stream);
         wk->Queue();
         return info.Env().Undefined();
     }
