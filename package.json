@@ -17,9 +17,7 @@
     "build:napi": "node-gyp build --arch=arm64 --jobs=8;",
     "build:napi:crosscompile": "npm run config_shell; source ./crosscompile.sh; node-gyp build --arch=arm64 --jobs=8;",
     "build": "npm run build:napi; npm run build:ts; npm run build:playground;",
-    "build:crosscompile": "npm run build:napi:crosscompile; npm run build:ts; npm run build:playground;",
-    "configure32": "node-gyp configure --arch=arm",
-    "build32": "node-gyp build --arch=arm && ./env.sh"
+    "build:crosscompile": "npm run build:napi:crosscompile; npm run build:ts; npm run build:playground;"
   },
   "exports": {
     ".": {
