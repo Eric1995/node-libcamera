@@ -8,12 +8,13 @@
   "types": "dist/es/index.d.ts",
   "typings": "dist/es/index.d.ts",
   "scripts": {
-    "clean": "node-gyp clean; rimraf ./dist",
-    "esbuild": "tsx ./esbuild.config.ts",
-    "build:playground": "tsx ./esbuild.config.ts --playground",
     "config_shell": "npm config set script-shell \"/bin/bash\";",
+    "clean": "node-gyp clean; rimraf ./dist",
     "configure": "npm run config_shell; source ./crosscompile.sh; node-gyp configure --arch=arm64",
-    "build": "npm run config_shell; source ./crosscompile.sh; node-gyp build --arch=arm64",
+    "build:ts": "tsx ./esbuild.config.ts",
+    "build:c": "JOBS=4 node-gyp build --arch=arm64;",
+    "build:playground": "tsx ./esbuild.config.ts --playground",
+    "build": "npm run config_shell; source ./crosscompile.sh; npm run build:c; npm run build:ts; npm run build:playground;",
     "configure32": "node-gyp configure --arch=arm",
     "build32": "node-gyp build --arch=arm && ./env.sh"
   },
