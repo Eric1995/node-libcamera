@@ -6,6 +6,8 @@ export enum StreamRole {
 }
 
 export enum PixelFormat {
+  RGB565 = 'RGB565',
+  RGB888 = 'RGB888',
   YUV420 = 'YUV420',
   SGBRG10_CSI2P = 'SGBRG10_CSI2P',
   SRGGB10_CSI2P = 'SRGGB10_CSI2P',
@@ -76,8 +78,16 @@ export interface RawCameraImage {
        * 1: save as DNG;
        * 2: save as JPEG;
        * 3: save as YUV;
+       * 4: save as QOI;
        */
-      type: 1 | 2 | 3;
+      type: 1 | 2 | 3 | 4;
+      /**
+       * @description
+       * number, 1 - 100
+       * @default 
+       * 90
+       */
+      quality?: number;
     },
     callback?: () => void,
   ) => void;
