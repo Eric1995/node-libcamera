@@ -2,6 +2,10 @@
     "targets": [
         {
             "target_name": "liblibcamera",
+            'variables' : {
+                # use cross platform compile or not
+                'FLAG': '<!(echo $FLAG)',
+            },
             "sources": [
                 "cpp/index.cpp", 
                 "cpp/utils/dma_heaps.cpp", 
@@ -21,14 +25,7 @@
             "dependencies": [
                 "<!@(node -p \"require('node-addon-api').gyp\")"
             ],
-            "libraries": [
-                "${PWD}/lib64/libcamera.so.0.3.2",
-                "${PWD}/lib64/libcamera-base.so.0.3.2",
-                "${PWD}/lib64/libtiff.so.6.0.0",
-                "${PWD}/lib64/libexif.so.12.3.4",
-                "${PWD}/lib64/libjpeg.so.62.3.0",
-                "${PWD}/lib64/libturbojpeg.so.0.4.0"
-            ],
+            "libraries": [],
             "cflags": [
                 "-std=c++23",
                 "-fpermissive",
@@ -47,6 +44,26 @@
                 "-static-libgcc"
             ],
             'defines': ["NAPI_CPP_EXCEPTIONS", "PI", "QOI_IMPLEMENTATION"],
+            "conditions": [
+                ['FLAG=="CROSS"', {
+                    "libraries": [
+                    "${PWD}/lib64/libcamera.so.0.3.2",
+                    "${PWD}/lib64/libcamera-base.so.0.3.2",
+                    "${PWD}/lib64/libexif.so.12.3.4",
+                    "${PWD}/lib64/libjpeg.so.62.3.0",
+                    "${PWD}/lib64/libtiff.so.6.0.0",
+                    "${PWD}/lib64/libturbojpeg.so.0.4.0"
+                    ],
+                }],
+                ['FLAG!="CROSS"', {
+                    "libraries": [
+                    "-lcamera",
+                    "-lcamera-base",
+                    "-lexif",
+                    "-ljpeg"
+                    ]
+                }]
+            ]
         }
     ]
 }
