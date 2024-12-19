@@ -1,11 +1,8 @@
 #ifndef _STREAM_H_
 #define _STREAM_H_ 1
-#include <cstdint>
+
 #include <libcamera/libcamera.h>
-#include <map>
 #include <napi.h>
-#include <stdint.h>
-#include <string>
 #include <sys/mman.h>
 
 using namespace Napi;

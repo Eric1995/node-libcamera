@@ -1,18 +1,10 @@
 #ifndef _CAMERA_H_
 #define _CAMERA_H_ 1
 
-#include <cstdint>
-#include <deque>
-#include <iostream>
 #include <libcamera/libcamera.h>
 #include <linux/dma-buf.h>
-#include <map>
 #include <napi.h>
-#include <stdint.h>
-#include <string>
 #include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <unistd.h>
 
 #include "FrameWorker.hpp"
 #include "utils/dma_heaps.hpp"

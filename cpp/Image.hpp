@@ -2,13 +2,8 @@
 
 #ifndef _IMAGE_
 #define _IMAGE_ 1
-#include <cstdint>
 #include <libcamera/libcamera.h>
-#include <map>
 #include <napi.h>
-#include <stdint.h>
-#include <string>
-#include <sys/mman.h>
 
 #include "Stream.hpp"
 #include "image/image.hpp"
@@ -119,7 +114,6 @@ class Image : public Napi::ObjectWrap<Image>
 
     Napi::Value getData(const Napi::CallbackInfo &info)
     {
-        std::cout << "get image yuv data" << std::endl;
         if (memory != nullptr && data != nullptr)
         {
             Napi::ArrayBuffer buf = Napi::ArrayBuffer::New(info.Env(), data, stream->configuration().frameSize, [](Napi::Env env, void *arg) {});
