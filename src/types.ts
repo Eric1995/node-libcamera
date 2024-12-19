@@ -133,7 +133,7 @@ export interface RawCamera {
   ) => RawCameraStream[];
   start: () => number;
   stop: () => boolean;
-  queueRequest: () => number;
+  sendRequest: () => number;
   release: () => boolean;
   getAvailableControls: () => {
     [k in keyof ControlList]: string;

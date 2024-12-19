@@ -428,7 +428,8 @@ class Camera : public Napi::ObjectWrap<Camera>
         return Napi::Number::New(info.Env(), 0);
     }
 
-    Napi::Value queueRequest(const Napi::CallbackInfo &info)
+    // 用户主动发送帧请求
+    Napi::Value sendRequest(const Napi::CallbackInfo &info)
     {
         if (state != Running)
         {
@@ -494,7 +495,7 @@ class Camera : public Napi::ObjectWrap<Camera>
                                               InstanceAccessor<&Camera::getId>("id", static_cast<napi_property_attributes>(napi_enumerable)),
                                               InstanceMethod<&Camera::basicInfo>("getInfo", static_cast<napi_property_attributes>(napi_enumerable)),
                                               InstanceMethod<&Camera::start>("start", static_cast<napi_property_attributes>(napi_enumerable)),
-                                              InstanceMethod<&Camera::queueRequest>("queueRequest", static_cast<napi_property_attributes>(napi_enumerable)),
+                                              InstanceMethod<&Camera::sendRequest>("sendRequest", static_cast<napi_property_attributes>(napi_enumerable)),
                                               InstanceMethod<&Camera::config>("config", static_cast<napi_property_attributes>(napi_enumerable)),
                                               InstanceMethod<&Camera::stop>("stop", static_cast<napi_property_attributes>(napi_enumerable)),
                                               InstanceMethod<&Camera::createStreams>("createStreams", static_cast<napi_property_attributes>(napi_enumerable)),
