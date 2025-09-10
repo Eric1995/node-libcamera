@@ -39,13 +39,11 @@
                     "ldflags": [ "-nolibc", "-static-libstdc++", "-static-libgcc" ],
                     "conditions": [
                         ["TARGET_ARCH=='arm64' or TARGET_ARCH=='aarch64'", {
-                            "include_dirs": ["/usr/include/aarch64-linux-gnu"],
                             "libraries": ["${PWD}/lib64/*"],
                             "cflags_cc": ["-target", "aarch64-linux-gnu"],  
                             "ldflags": ["-target", "aarch64-linux-gnu"]  
                         }],
                         ["TARGET_ARCH=='arm'", {
-                            "include_dirs": ["/usr/include/arm-linux-gnueabihf"],
                             "libraries": ["${PWD}/lib32/*"],
                             "cflags_cc": ["-target", "arm-linux-gnueabi"],        
                             "ldflags": ["-target", "arm-linux-gnueabi"]                      
@@ -54,10 +52,10 @@
                 }],
                 ["FLAG!='CROSS'", {
                     "libraries": [
-                    "-lcamera",
-                    "-lcamera-base",
-                    "-lexif",
-                    "-ljpeg"
+                        "-lcamera",
+                        "-lcamera-base",
+                        "-lexif",
+                        "-ljpeg"
                     ]
                 }]
             ]
