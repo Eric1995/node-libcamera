@@ -11,11 +11,11 @@
     "build:ts": "tsx ./esbuild.config.ts",
     "build:playground": "tsx ./esbuild.config.ts --playground",
     "configure": "node-gyp configure",
-    "configure:crosscompile": "FLAG=CROSS node-gyp configure",
-    "build:napi": "CXX=clang++ node-gyp build --jobs=8;",
-    "build:napi:crosscompile": "CXX=clang++ FLAG=CROSS node-gyp build --jobs=8;",
+    "configure:arm64": "FLAG=CROSS TARGET_ARCH=aarch64 node-gyp configure",
+    "build:napi": "CC=clang CXX=clang++ node-gyp build --jobs=8;",
+    "build:napi:arm64": "CC=clang CXX=clang++ FLAG=CROSS TARGET_ARCH=aarch64 node-gyp build --jobs=8;",
     "build": "npm run build:napi; npm run build:ts; npm run build:playground;",
-    "build:crosscompile": "npm run build:napi:crosscompile && npm run build:ts && npm run build:playground;"
+    "build:arm64": "npm run build:napi:arm64 && npm run build:ts && npm run build:playground;"
   },
   "exports": {
     ".": {

@@ -1,7 +1,8 @@
 {
-    'variables' : {
+    "variables" : {
         # use cross platform compile or not
         "FLAG": "<!(echo $FLAG)",
+        "TARGET_ARCH": "<!(echo $TARGET_ARCH)",
     },
     "targets": [
         {
@@ -41,24 +42,39 @@
             
             'defines': ["NAPI_CPP_EXCEPTIONS", "PI", "QOI_IMPLEMENTATION"],
             "conditions": [
-                ['FLAG=="CROSS"', {
-                    "libraries": [
-                        "${PWD}/lib64/*",
-                    ],
-                    "cflags": [
-                        "-target", "aarch64-linux-gnu",
-                    ],  
-                    "cflags_cc": [
-                        "-target", "aarch64-linux-gnu"
-                    ],  
+                ["FLAG=='CROSS'", {
                     "ldflags": [
                         "-target", "aarch64-linux-gnu",
                         "-nolibc",
                         "-static-libstdc++",
                         "-static-libgcc"
                     ],
+                    "conditions": [
+                        ["TARGET_ARCH=='arm64' or TARGET_ARCH=='aarch64'", {
+                            "libraries": [
+                            "${PWD}/lib64/*",
+                            ],
+                            "cflags": [
+                                "-target", "aarch64-linux-gnu",
+                            ],  
+                            "cflags_cc": [
+                                "-target", "aarch64-linux-gnu"
+                            ]  
+                        }],
+                        ["TARGET_ARCH=='arm'", {
+                            "libraries": [
+                                "${PWD}/lib32/*",
+                            ],
+                            "cflags": [
+                                "-target", "arm-linux-gnueabi"
+                            ],  
+                            "cflags_cc": [
+                                "-target", "arm-linux-gnueabi"
+                            ],                             
+                        }],
+                    ],
                 }],
-                ['FLAG!="CROSS"', {
+                ["FLAG!='CROSS'", {
                     "libraries": [
                     "-lcamera",
                     "-lcamera-base",
