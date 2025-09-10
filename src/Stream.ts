@@ -42,14 +42,14 @@ class Stream {
   public config(
     option: Omit<Parameters<RawCameraStream['configStream']>[0], 'onImageData' | 'data_output_type'> & {
       /**
-       * @description 
-       * data output format    
-       * 0: fd and buffer;  
-       * 1: fd only;  
+       * @description
+       * data output format
+       * 0: fd and buffer;
+       * 1: fd only;
        * @default 1
        */
       dataOutputType?: 0 | 1;
-      onImageData: (err: unknown, ok: boolean, image: Image) => void;
+      onImageData?: (err: unknown, ok: boolean, image: Image) => void;
     },
   ) {
     if (!option || typeof option !== 'object') return;
@@ -57,7 +57,7 @@ class Stream {
     if (option.onImageData && typeof option.onImageData === 'function') {
       newOption.onImageData = (err: string, ok, image) => {
         const _image = new Image(image);
-        option.onImageData(err, ok, _image);
+        option.onImageData?.(err, ok, _image);
       };
     }
     return this.stream.configStream(newOption);
