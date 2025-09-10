@@ -1,19 +1,18 @@
 {
     "configurations": [
         {
-            "name": "linux-gcc-x64",
+            "name": "linux-clang-x64",
             "includePath": [
                 "${workspaceFolder}/**",
                 "/usr/include/libcamera",
                 "/usr/local/include/libcamera",
-                "/opt/libjpeg-turbo/include",
                 "${workspaceFolder}/node_modules/node-addon-api",
                 "~/.cache/node-gyp/**/include/**"
             ],
-            "compilerPath": "/usr/bin/gcc",
+            "compilerPath": "/usr/bin/clang",
             "cStandard": "${default}",
             "cppStandard": "c++23",
-            "intelliSenseMode": "linux-gcc-x64",
+            "intelliSenseMode": "linux-clang-x64",
             "compilerArgs": [
                 ""
             ]
