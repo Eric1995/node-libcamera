@@ -21,6 +21,7 @@
                 "/usr/include/libcamera",
                 "/opt/libjpeg-turbo/include",
                 "/usr/include/aarch64-linux-gnu",
+                "/usr/include/arm-linux-gnueabihf",
                 "./include"
             ],
             "dependencies": [
