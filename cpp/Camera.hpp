@@ -55,6 +55,9 @@ class Camera : public Napi::ObjectWrap<Camera>
     bool auto_queue_request = true;
     float max_frame_rate = 30.0;
     crop_t crop;
+    bool vflip = false;
+    bool hflip = false;
+    int rotation = 0;
 
     std::vector<libcamera::StreamRole> stream_roles;
     std::unique_ptr<libcamera::CameraConfiguration> camera_config = nullptr;
@@ -92,6 +95,10 @@ class Camera : public Napi::ObjectWrap<Camera>
 
     void clean()
     {
+        for (auto const &[key, val] : Stream::stream_config_map)
+        {
+            delete val;
+        }
         Stream::stream_config_map.clear();
         streams.clear();
         stream_index_map.clear();
@@ -216,6 +223,21 @@ class Camera : public Napi::ObjectWrap<Camera>
         }
         auto config = camera->generateConfiguration(stream_roles);
         camera_config = std::move(config);
+        if (vflip)
+        {
+            libcamera::Transform transform = libcamera::Transform::VFlip;
+            camera_config->orientation = camera_config->orientation * transform;
+        }
+        if (hflip)
+        {
+            libcamera::Transform transform = libcamera::Transform::HFlip;
+            camera_config->orientation = camera_config->orientation * transform;
+        }
+        if (rotation != 0)
+        {
+            libcamera::Transform transform = libcamera::transformFromRotation(this->rotation);
+            camera_config->orientation = camera_config->orientation * transform;
+        }
         for (int i = 0; i < optionList.Length(); i++)
         {
             Napi::Object option = optionList.Get(i).As<Napi::Object>();
@@ -313,9 +335,7 @@ class Camera : public Napi::ObjectWrap<Camera>
 
     void requestComplete(const Napi::CallbackInfo &info, libcamera::Request *request)
     {
-        struct dma_buf_sync dma_sync
-        {
-        };
+        struct dma_buf_sync dma_sync{};
         dma_sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_READ;
         for (auto const &buffer_map : request->buffers())
         {
@@ -424,6 +444,35 @@ class Camera : public Napi::ObjectWrap<Camera>
             libcamera::Rectangle crop(x, y, w, h);
             crop.translateBy(sensor_area->topLeft());
             control_list.set(libcamera::controls::ScalerCrop, crop);
+        }
+        if (option.Get("vflip").IsBoolean())
+        {
+            std::cout << "vflip" << std::endl;
+            this->vflip = option.Get("vflip").As<Napi::Boolean>();
+            if (camera_config != nullptr)
+            {
+                std::cout << "set up vflip " << std::endl;
+                libcamera::Transform transform = libcamera::Transform::VFlip;
+                camera_config->orientation = camera_config->orientation * transform;
+            }
+        }
+        if (option.Get("hflip").IsBoolean())
+        {
+            this->hflip = option.Get("hflip").As<Napi::Boolean>();
+            if (camera_config != nullptr)
+            {
+                libcamera::Transform transform = libcamera::Transform::HFlip;
+                camera_config->orientation = camera_config->orientation * transform;
+            }
+        }
+        if (option.Get("rotation").IsNumber())
+        {
+            this->rotation = option.Get("rotation").As<Napi::Number>().Int32Value();
+            if (camera_config != nullptr)
+            {
+                libcamera::Transform transform = libcamera::transformFromRotation(this->rotation);
+                camera_config->orientation = camera_config->orientation * transform;
+            }
         }
         return Napi::Number::New(info.Env(), 0);
     }
