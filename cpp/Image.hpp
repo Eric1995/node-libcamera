@@ -131,7 +131,7 @@ class Image : public Napi::ObjectWrap<Image>
         {
             printf("mmap error : %d-%s. \r\n", errno, strerror(errno));
         }
-        fast_memcpy(data, memory, stream->configuration().frameSize);
+        memcpy(data, memory, stream->configuration().frameSize);
         Napi::ArrayBuffer buf = Napi::ArrayBuffer::New(info.Env(), data, stream->configuration().frameSize, [](Napi::Env env, void *arg) {});
         return buf;
     }
@@ -168,7 +168,7 @@ class Image : public Napi::ObjectWrap<Image>
         auto plane = buffer->planes()[0];
         void *memory = mmap(NULL, frame_size, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), 0);
         uint8_t *copy_mem = new uint8_t[frame_size];
-        fast_memcpy(copy_mem, memory, frame_size);
+        memcpy(copy_mem, memory, frame_size);
         auto wk = new SaveWorker(cb, type, file_name, frame_size, quality, copy_mem, metadata, stream);
         wk->Queue();
         return info.Env().Undefined();
