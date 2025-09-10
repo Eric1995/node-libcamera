@@ -1,11 +1,11 @@
 {
+    'variables' : {
+        # use cross platform compile or not
+        "FLAG": "<!(echo $FLAG)",
+    },
     "targets": [
         {
             "target_name": "liblibcamera",
-            'variables' : {
-                # use cross platform compile or not
-                'FLAG': '<!(echo $FLAG)',
-            },
             "sources": [
                 "cpp/index.cpp", 
                 "cpp/utils/dma_heaps.cpp", 
@@ -45,7 +45,14 @@
                     "libraries": [
                         "${PWD}/lib64/*",
                     ],
+                    "cflags": [
+                        "-target", "aarch64-linux-gnu",
+                    ],  
+                    "cflags_cc": [
+                        "-target", "aarch64-linux-gnu"
+                    ],  
                     "ldflags": [
+                        "-target", "aarch64-linux-gnu",
                         "-nolibc",
                         "-static-libstdc++",
                         "-static-libgcc"

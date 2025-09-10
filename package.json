@@ -1,29 +1,32 @@
 {
   "name": "node-libcamera",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
   "type": "module",
-  "main": "dist/lib/index.js",
-  "module": "dist/es/index.js",
-  "types": "dist/es/index.d.ts",
-  "typings": "dist/es/index.d.ts",
+  "main": "dist/lib/index.cjs",
+  "module": "dist/es/index.mjs",
+  "types": "dist/types/index.d.ts",
   "scripts": {
     "clean": "node-gyp clean; rimraf ./dist",
     "build:ts": "tsx ./esbuild.config.ts",
     "build:playground": "tsx ./esbuild.config.ts --playground",
-    "config_shell": "npm config set script-shell \"/bin/bash\";",
-    "configure": "node-gyp configure --arch=arm64",
-    "configure:crosscompile": "npm run config_shell; source ./crosscompile.sh; node-gyp configure --arch=arm64",
-    "build:napi": "node-gyp build --arch=arm64 --jobs=8;",
-    "build:napi:crosscompile": "npm run config_shell; source ./crosscompile.sh; node-gyp build --arch=arm64 --jobs=8;",
+    "configure": "node-gyp configure",
+    "configure:crosscompile": "FLAG=CROSS node-gyp configure",
+    "build:napi": "CXX=clang++ node-gyp build --jobs=8;",
+    "build:napi:crosscompile": "CXX=clang++ FLAG=CROSS node-gyp build --jobs=8;",
     "build": "npm run build:napi; npm run build:ts; npm run build:playground;",
-    "build:crosscompile": "npm run build:napi:crosscompile; npm run build:ts; npm run build:playground;"
+    "build:crosscompile": "npm run build:napi:crosscompile && npm run build:ts && npm run build:playground;"
   },
   "exports": {
     ".": {
-      "import": "./dist/es/index.js",
-      "require": "./dist/lib/index.js",
-      "types": "./dist/es/index.d.ts"
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/es/index.mjs",
+      "require": "./dist/lib/index.cjs"
+    },
+    "./addon": {
+      "types": "./dist/types/addonLoader.d.ts",
+      "import": "./dist/es/addonLoader.mjs",
+      "require": "./dist/lib/addonLoader.cjs"
     }
   },
   "files": [
@@ -36,21 +39,19 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/bindings": "^1.5.5",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.10.2",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
-    "bindings": "^1.5.0",
-    "esbuild": "^0.20.0",
+    "esbuild": "^0.25.9",
     "eslint-define-config": "^2.1.0",
     "eslint-plugin-simple-import-sort": "^10.0.0",
     "fs-extra": "^11.2.0",
-    "node-addon-api": "^8.3.0",
-    "node-gyp": "^11.0.0",
+    "node-addon-api": "^8.5.0",
+    "node-gyp": "^11.4.2",
     "prettier": "^3.1.1",
     "rimraf": "^6.0.1",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
   }
 }
