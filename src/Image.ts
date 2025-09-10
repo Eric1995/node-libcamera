@@ -1,4 +1,5 @@
 import type { RawCameraImage } from './types';
+import { numberToFourcc } from './utils';
 
 class Image {
   private image: RawCameraImage;
@@ -28,6 +29,14 @@ class Image {
 
   public get frameSize() {
     return this.image.frameSize;
+  }
+
+  public get pixelFormatFourcc() {
+    return this.image.pixelFormatFourcc;
+  }
+
+  public get pixelFormatFourccString() {
+    return numberToFourcc(this.image.pixelFormatFourcc);
   }
 
   public save(option: Parameters<RawCameraImage['save']>[0], callback?: Parameters<RawCameraImage['save']>[1]) {
