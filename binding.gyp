@@ -20,20 +20,12 @@
                 "/usr/local/include/libcamera",
                 "/usr/include/libcamera",
                 "/opt/libjpeg-turbo/include",
-                "/usr/include/aarch64-linux-gnu",
-                "/usr/include/arm-linux-gnueabihf",
                 "./include"
             ],
             "dependencies": [
                 "<!@(node -p \"require('node-addon-api').gyp\")"
             ],
-            "libraries": [],
-            "cflags": [
-                "-std=c++23",
-                "-fpermissive",
-                "-fexceptions",
-                "-O1"
-            ],  
+            "libraries": [],  
             "cflags_cc": [
                 "-std=c++23",
                 "-fpermissive",
@@ -41,37 +33,22 @@
                 "-O1"
             ],  
             
-            'defines': ["NAPI_CPP_EXCEPTIONS", "PI", "QOI_IMPLEMENTATION"],
+            "defines": ["NAPI_CPP_EXCEPTIONS", "PI", "QOI_IMPLEMENTATION"],
             "conditions": [
                 ["FLAG=='CROSS'", {
-                    "ldflags": [
-                        "-target", "aarch64-linux-gnu",
-                        "-nolibc",
-                        "-static-libstdc++",
-                        "-static-libgcc"
-                    ],
+                    "ldflags": [ "-nolibc", "-static-libstdc++", "-static-libgcc" ],
                     "conditions": [
                         ["TARGET_ARCH=='arm64' or TARGET_ARCH=='aarch64'", {
-                            "libraries": [
-                            "${PWD}/lib64/*",
-                            ],
-                            "cflags": [
-                                "-target", "aarch64-linux-gnu",
-                            ],  
-                            "cflags_cc": [
-                                "-target", "aarch64-linux-gnu"
-                            ]  
+                            "include_dirs": ["/usr/include/aarch64-linux-gnu"],
+                            "libraries": ["${PWD}/lib64/*"],
+                            "cflags_cc": ["-target", "aarch64-linux-gnu"],  
+                            "ldflags": ["-target", "aarch64-linux-gnu"]  
                         }],
                         ["TARGET_ARCH=='arm'", {
-                            "libraries": [
-                                "${PWD}/lib32/*",
-                            ],
-                            "cflags": [
-                                "-target", "arm-linux-gnueabi"
-                            ],  
-                            "cflags_cc": [
-                                "-target", "arm-linux-gnueabi"
-                            ],                             
+                            "include_dirs": ["/usr/include/arm-linux-gnueabihf"],
+                            "libraries": ["${PWD}/lib32/*"],
+                            "cflags_cc": ["-target", "arm-linux-gnueabi"],        
+                            "ldflags": ["-target", "arm-linux-gnueabi"]                      
                         }],
                     ],
                 }],
