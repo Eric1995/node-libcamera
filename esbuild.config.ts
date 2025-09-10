@@ -6,24 +6,35 @@ const args = process.argv.slice(2);
 
 const outputPath = 'dist';
 
-if (args.some(a => a.includes('--playground'))) {
+if (args.some((a) => a.includes('--playground'))) {
   esbuild.buildSync({
     entryPoints: ['playground/*.ts'],
     outdir: `${outputPath}/playground/`,
     format: 'esm',
-    bundle: true,
-    platform: 'node',
     tsconfig: './tsconfig.json',
     target: 'ESNext',
-    external: ['../build/Release/*.node'],
-    outExtension: {
-      '.js': '.mjs'
+    bundle: true,
+    platform: 'node',
+    define: {
+      'process.env.NODE_ENV': '"production"',
     },
-    banner: {
-      js: `
-  import { createRequire } from 'module';
-  const require = createRequire(import.meta.url);
-      `,
+    outExtension: {
+      '.js': '.mjs',
+    },
+  });
+  esbuild.buildSync({
+    entryPoints: ['playground/*.ts'],
+    outdir: `${outputPath}/playground/`,
+    format: 'cjs',
+    tsconfig: './tsconfig.json',
+    target: 'ESNext',
+    bundle: true,
+    platform: 'node',
+    define: {
+      'process.env.NODE_ENV': '"production"',
+    },
+    outExtension: {
+      '.js': '.cjs',
     },
   });
   process.exit(1);
@@ -32,7 +43,7 @@ if (args.some(a => a.includes('--playground'))) {
 if (fs.existsSync(outputPath)) fs.rmSync(outputPath, { recursive: true });
 
 esbuild.buildSync({
-  entryPoints: ['src/index.ts'],
+  entryPoints: ['src/index.ts', 'src/addonLoader.ts'],
   outdir: `${outputPath}/es/`,
   format: 'esm',
   bundle: true,
@@ -40,16 +51,16 @@ esbuild.buildSync({
   tsconfig: './tsconfig.json',
   target: 'ESNext',
   external: ['../build/Release/libcamera.node'],
-  banner: {
-    js: `
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-    `,
+  define: {
+    'process.env.NODE_ENV': '"production"',
+  },
+  outExtension: {
+    '.js': '.mjs',
   },
 });
 
 esbuild.buildSync({
-  entryPoints: ['src/index.ts'],
+  entryPoints: ['src/index.ts', 'src/addonLoader.ts'],
   outdir: `${outputPath}/lib/`,
   format: 'cjs',
   bundle: true,
@@ -57,17 +68,24 @@ esbuild.buildSync({
   tsconfig: './tsconfig.json',
   target: 'ESNext',
   external: ['../build/Release/libcamera.node'],
+  define: {
+    'process.env.NODE_ENV': '"production"',
+  },
+  outExtension: {
+    '.js': '.cjs',
+  },
 });
 
 try {
-  execSync(`tsc --emitDeclarationOnly --declaration --project tsconfig.json --outDir ${outputPath}/types`);
+  execSync(`tsc --emitDeclarationOnly --declaration --project tsconfig.json --outDir ${outputPath}/types_tmp`);
 } catch (error) {
   console.error(error.stdout.toString());
 }
 
-fs.copySync(`${outputPath}/types`, `${outputPath}/es`);
+fs.ensureDirSync(`${outputPath}/types`);
+fs.copySync(`${outputPath}/types_tmp/src`, `${outputPath}/types`);
 // fs.copySync(`${outputPath}/types/src`, `${outputPath}/lib`);
-fs.rmSync(`${outputPath}/types`, { recursive: true });
+fs.rmSync(`${outputPath}/types_tmp`, { recursive: true });
 
 if (fs.existsSync('build/Release/libcamera.node')) {
   fs.copySync(`build/Release/libcamera.node`, `${outputPath}/build/Release/libcamera.node`);
