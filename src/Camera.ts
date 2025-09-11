@@ -23,16 +23,27 @@ class Camera {
       height: number;
       role?: StreamRole;
       pixel_format?: PixelFormat;
+      vflip?: boolean;
+      hflip?: boolean;
+      rotation?: number;
+      sensorMode?: { width: number; height: number; bitDepth: number; packed?: boolean };
       onImageData?: (err: unknown, ok: boolean, image: Image) => void;
     }[],
   ) {
-    const streams = this.camera.createStreams(option);
-    // immediately overwrite onImageData
+    const _option: Omit<(typeof option)[number], 'onImageData'>[] = option.map((o) => {
+      const _o = Object.assign({}, o);
+      delete _o.onImageData;
+      return _o;
+    });
+    const streams = this.camera.createStreams(_option);
+
     return streams.map((s) => {
       const st = new Stream(s);
+      // immediately overwrite onImageData
       st.config({
         onImageData: option[s.streamIndex].onImageData,
       });
+      return st;
     });
   }
 
@@ -50,6 +61,18 @@ class Camera {
 
   public sendRequest() {
     return this.camera.sendRequest();
+  }
+
+  public getAvailableControls() {
+    return this.camera.getAvailableControls();
+  }
+
+  public setControl(controlls: Parameters<RawCamera['setControl']>[0]) {
+    return this.camera.setControl(controlls);
+  }
+
+  public get sensorModes() {
+    return this.camera.sensorModes;
   }
 }
 

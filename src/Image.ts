@@ -32,11 +32,11 @@ class Image {
   }
 
   public get pixelFormatFourcc() {
-    return this.image.pixelFormatFourcc;
+    return numberToFourcc(this.image.pixelFormatFourcc);
   }
 
-  public get pixelFormatFourccString() {
-    return numberToFourcc(this.image.pixelFormatFourcc);
+  public get pixelFormatFourccNumber() {
+    return this.image.pixelFormatFourcc;
   }
 
   public save(option: Parameters<RawCameraImage['save']>[0], callback?: Parameters<RawCameraImage['save']>[1]) {

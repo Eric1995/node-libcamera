@@ -1,5 +1,6 @@
 import Image from './Image';
 import type { RawCameraStream } from './types';
+import { numberToFourcc } from './utils';
 
 class Stream {
   private stream: RawCameraStream;
@@ -20,6 +21,10 @@ class Stream {
   }
 
   public get pixelFormtFourcc() {
+    return numberToFourcc(this.stream.pixelFormtFourcc);
+  }
+
+  public get pixelFormtFourccNumber() {
     return this.stream.pixelFormtFourcc;
   }
 
