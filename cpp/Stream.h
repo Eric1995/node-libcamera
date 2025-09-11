@@ -8,8 +8,6 @@ using namespace Napi;
 
 struct stream_config
 {
-    bool auto_queue_request = false;
-    uint8_t data_format = 1;
     FunctionReference callback_ref;
 };
 
@@ -19,24 +17,13 @@ class Stream : public Napi::ObjectWrap<Stream>
   public:
     static Napi::FunctionReference *constructor;
     int index = -1;
-    // libcamera::Camera *camera;
 
     bool auto_queue_request = false;
     uint8_t data_format = 1;
-    FunctionReference *callback_ref;
+    FunctionReference callback_ref;
 
-    // unsigned int stride;
-    // std::optional<libcamera::ColorSpace> colorSpace;
-    // std::string pixelFormat;
-    // unsigned int frameSize;
-    // libcamera::Size *size;
-
-    // libcamera::CameraConfiguration *camera_config;
-    // std::deque<std::unique_ptr<libcamera::Request>> *requests;
-    libcamera::StreamConfiguration streamConfiguration;
+    libcamera::StreamConfiguration *streamConfiguration;
     static std::map<unsigned int, stream_config *> stream_config_map;
-
-    stream_config *config;
     Stream(const Napi::CallbackInfo &info);
     ~Stream();
     Napi::Value configStream(const Napi::CallbackInfo &info);

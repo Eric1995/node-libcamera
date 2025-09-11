@@ -18,8 +18,7 @@ using WorkerType = void *;
 class FrameWorker : public AsyncProgressQueueWorker<WorkerType>
 {
   public:
-    FrameWorker(const Napi::CallbackInfo &info, libcamera::Camera *_camera, std::deque<libcamera::Request *> *wait_queue, std::map<libcamera::Stream *, Stream *> *_stream_map,
-                std::map<libcamera::Stream *, unsigned int> *_stream_index_map);
+    FrameWorker(const Napi::CallbackInfo &info, std::deque<libcamera::Request *> *wait_queue, std::map<libcamera::Stream *, Napi::ObjectReference> *_stream_map);
 
     ~FrameWorker();
 
@@ -40,6 +39,6 @@ class FrameWorker : public AsyncProgressQueueWorker<WorkerType>
     std::deque<libcamera::Request *> *cache_queue;
     std::mutex mtx; // 互斥量，保护产品缓冲区
     std::condition_variable frame_available;
-    std::map<libcamera::Stream *, Stream *> *stream_map;
+    std::map<libcamera::Stream *, Napi::ObjectReference> *stream_map;
     std::map<libcamera::Stream *, unsigned int> *stream_index_map;
 };

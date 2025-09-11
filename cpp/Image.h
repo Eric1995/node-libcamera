@@ -31,13 +31,17 @@ class SaveWorker : public AsyncWorker
 
 class Image : public Napi::ObjectWrap<Image>
 {
+  private:
+    libcamera::Stream *stream;
+    libcamera::Request *request;
+
   public:
     static Napi::FunctionReference *constructor;
     // libcamera::Camera *camera;
-    libcamera::Request *request;
+    // libcamera::Request *request;
     int fd;
     uint32_t frame_size;
-    libcamera::Stream *stream;
+    // libcamera::Stream *stream;
     libcamera::FrameBuffer *buffer;
     // stream_config *s_config;
     libcamera::ControlList *metadata;

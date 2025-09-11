@@ -75,7 +75,8 @@ class Camera : public Napi::ObjectWrap<Camera>
     std::vector<std::unique_ptr<libcamera::Request>> requests;
     std::deque<libcamera::Request *> requests_deque;
     std::deque<libcamera::Request *> wait_deque;
-    std::map<libcamera::Stream *, Stream *> napi_stream_map;
+    // 保存对Stream的引用,防止被JS垃圾回收
+    std::map<libcamera::Stream *, Napi::ObjectReference> napi_stream_map;
     std::map<libcamera::Stream *, unsigned int> stream_index_map;
 
     DmaHeap dma_heap_;

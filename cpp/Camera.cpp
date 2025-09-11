@@ -22,12 +22,13 @@ Camera::~Camera()
 
 void Camera::clean()
 {
-    for (auto const &[key, val] : Stream::stream_config_map)
-    {
-        delete val;
-    }
-    Stream::stream_config_map.clear();
     streams.clear();
+    // 释放对 Stream 对象的持久化引用，允许它们被 GC
+    for (auto &pair : napi_stream_map)
+    {
+        pair.second.Reset();
+    }
+    napi_stream_map.clear();
     stream_index_map.clear();
     requests.clear();
     requests_deque.clear();
@@ -90,18 +91,21 @@ Napi::Value Camera::createStreams(const Napi::CallbackInfo &info)
     {
         Napi::Object option = optionList.Get(i).As<Napi::Object>();
         libcamera::StreamConfiguration &streamConfig = camera_config->at(i);
+        Napi::Value onImageData = info.Env().Undefined();
+        if (option.Has("onImageData") && option.Get("onImageData").IsFunction())
+        {
+            Napi::Function jsFunc = option.Get("onImageData").As<Napi::Function>();
+            onImageData = option.Get("onImageData");
+        }
         auto external_config = Napi::External<libcamera::StreamConfiguration>::New(info.Env(), &streamConfig);
-        auto stream_obj = Stream::constructor->New({Napi::Number::New(info.Env(), i), external_config});
+        auto stream_obj = Stream::constructor->New({Napi::Number::New(info.Env(), i), external_config, onImageData});
         auto stream = streamConfig.stream();
-        napi_stream_map[stream] = Stream::Unwrap(stream_obj);
+        napi_stream_map[stream] = Napi::Persistent(stream_obj);
+        napi_stream_map[stream].SuppressDestruct(); // 因为它由 map 管理，在 clean() 中手动释放
         napi_stream_array[i] = stream_obj;
         streams.push_back(stream);
         stream_index_map[stream] = i;
-        stream_config *_config = new stream_config();
-        Stream::stream_config_map[i] = _config;
 
-        if (option.Has("onImageData") && option.Get("onImageData").IsFunction())
-            _config->callback_ref = Napi::Persistent(option.Get("onImageData").As<Napi::Function>());
         for (unsigned int j = 0; j < streamConfig.bufferCount; j++)
         {
             if (requests.size() <= j)
@@ -128,7 +132,7 @@ Napi::Value Camera::start(const Napi::CallbackInfo &info)
     Napi::HandleScope scope(info.Env());
     if (state == Running)
         return Napi::Number::New(info.Env(), -1);
-    worker = std::make_unique<FrameWorker>(info, camera.get(), &wait_deque, &napi_stream_map, &stream_index_map);
+    worker = std::make_unique<FrameWorker>(info, &wait_deque, &napi_stream_map);
     worker->Queue();
     int ret = camera->start();
     state = Running;

@@ -49,13 +49,11 @@ void SaveWorker::OnOK()
 Image::Image(const Napi::CallbackInfo &info) : Napi::ObjectWrap<Image>(info)
 {
     bool lossless = true;
-    // camera = reinterpret_cast<libcamera::Camera *>(info[0].As<Napi::BigInt>().Int64Value(&lossless));
-    stream = reinterpret_cast<libcamera::Stream *>(info[0].As<Napi::BigInt>().Int64Value(&lossless));
-    request = reinterpret_cast<libcamera::Request *>(info[1].As<Napi::BigInt>().Int64Value(&lossless));
-    // data_format = info[2].As<Napi::Number>().Uint32Value();
+    stream = info[0].As<Napi::External<libcamera::Stream>>().Data();
+    request = info[1].As<Napi::External<libcamera::Request>>().Data();
     metadata = new libcamera::ControlList(request->metadata());
     // request status is COMPLETE
-    const std::map<const libcamera::Stream *, libcamera::FrameBuffer *> &buffers = request->buffers();
+    auto buffers = request->buffers();
     buffer = buffers.at(stream);
     frame_size = stream->configuration().frameSize;
     auto plane = buffer->planes()[0];
@@ -64,7 +62,7 @@ Image::Image(const Napi::CallbackInfo &info) : Napi::ObjectWrap<Image>(info)
 
 Image::~Image()
 {
-    printf("Image object destroyed for request %p\n", request);
+    // printf("Image object destroyed for request %p\n", request);
     delete metadata;
     if (memory != nullptr)
     {

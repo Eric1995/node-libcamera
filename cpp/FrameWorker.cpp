@@ -1,8 +1,7 @@
 #include "FrameWorker.h"
 
-FrameWorker::FrameWorker(const Napi::CallbackInfo &info, libcamera::Camera *_camera, std::deque<libcamera::Request *> *wait_queue, std::map<libcamera::Stream *, Stream *> *_stream_map,
-                         std::map<libcamera::Stream *, unsigned int> *_stream_index_map)
-    : AsyncProgressQueueWorker(info.Env()), camera(_camera), cache_queue(wait_queue), stream_map(_stream_map), stream_index_map(_stream_index_map)
+FrameWorker::FrameWorker(const Napi::CallbackInfo &info, std::deque<libcamera::Request *> *wait_queue, std::map<libcamera::Stream *, Napi::ObjectReference> *_stream_map)
+    : AsyncProgressQueueWorker(info.Env()), cache_queue(wait_queue), stream_map(_stream_map)
 {
 }
 
@@ -38,26 +37,19 @@ void FrameWorker::OnProgress(const WorkerType *data, size_t /* count */)
     while (cache_queue->size())
     {
         auto request = cache_queue->front();
-        // auto req_addr = Napi::BigInt::New(Env(), reinterpret_cast<uint64_t>(request));
         cache_queue->pop_front();
         for (auto &pair : request->buffers())
         {
-            libcamera::Stream *stream = (libcamera::Stream *)pair.first;
-            auto config = stream_map->at(stream);
-            Napi::Object image = Image::constructor->New(
-                {Napi::BigInt::New(Env(), reinterpret_cast<uint64_t>(stream)), Napi::BigInt::New(Env(), reinterpret_cast<uint64_t>(request)), Napi::Number::New(Env(), config->data_format)});
-            if (stream_index_map->contains(stream))
-            {
-                unsigned int index = stream_index_map->at(stream);
-                if (Stream::stream_config_map.contains(index))
-                {
-                    auto &callback = Stream::stream_config_map[index]->callback_ref;
-                    if (callback && !callback.IsEmpty())
-                    {
-                        callback.Call({Env().Null(), Env().Null(), image});
-                    }
-                }
-            }
+            auto stream = (libcamera::Stream *)pair.first;
+            // 从 ObjectReference 获取 JS 对象，然后 Unwrap 获取 C++ 指针
+            Napi::Object stream_obj = stream_map->at(stream).Value();
+            auto mStream = Stream::Unwrap(stream_obj);
+            auto external_stream = Napi::External<libcamera::Stream>::New(Env(), stream);
+            auto external_request = Napi::External<libcamera::Request>::New(Env(), request);
+            Napi::Object image = Image::constructor->New({external_stream, external_request});
+            auto &callback = mStream->callback_ref;
+            if (callback && !callback.IsEmpty())
+                callback.Call({Env().Null(), Env().Null(), image});
         }
     }
 }
