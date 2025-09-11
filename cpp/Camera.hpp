@@ -8,7 +8,7 @@
 
 #include "FrameWorker.hpp"
 #include "utils/dma_heaps.hpp"
-#include "utils/util.hpp"
+// #include "utils/util.hpp"
 
 static const std::map<int, std::string> cfa_map = {
     {libcamera::properties::draft::ColorFilterArrangementEnum::RGGB, "RGGB"}, {libcamera::properties::draft::ColorFilterArrangementEnum::GRBG, "GRBG"},
@@ -223,6 +223,7 @@ class Camera : public Napi::ObjectWrap<Camera>
         }
         auto config = camera->generateConfiguration(stream_roles);
         camera_config = std::move(config);
+
         if (vflip)
         {
             libcamera::Transform transform = libcamera::Transform::VFlip;
@@ -248,6 +249,18 @@ class Camera : public Napi::ObjectWrap<Camera>
                 streamConfig.size.height = option.Get("height").As<Napi::Number>().Uint32Value();
             if (option.Has("pixel_format") && option.Get("pixel_format").IsString())
                 streamConfig.pixelFormat = libcamera::PixelFormat::fromString(option.Get("pixel_format").As<Napi::String>().Utf8Value());
+            if (option.Has("sensorMode") && option.Get("sensorMode").IsObject())
+            {
+                Napi::Object sensorModeObj = option.Get("sensorMode").As<Napi::Object>();
+                uint32_t width = sensorModeObj.Get("width").As<Napi::Number>().Uint32Value();
+                uint32_t height = sensorModeObj.Get("height").As<Napi::Number>().Uint32Value();
+                uint32_t bitDepth = sensorModeObj.Get("bitDepth").As<Napi::Number>().Uint32Value();
+                bool packed = sensorModeObj.Has("packed") ? sensorModeObj.Get("packed").As<Napi::Boolean>().Value() : false;
+
+                camera_config->sensorConfig = libcamera::SensorConfiguration();
+                camera_config->sensorConfig->outputSize = libcamera::Size(width, height);
+                camera_config->sensorConfig->bitDepth = bitDepth;
+            }
         }
         auto status = camera_config->validate();
         camera->configure(camera_config.get());
