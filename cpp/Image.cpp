@@ -64,7 +64,13 @@ Image::Image(const Napi::CallbackInfo &info) : Napi::ObjectWrap<Image>(info)
 
 Image::~Image()
 {
+    printf("Image object destroyed for request %p\n", request);
     delete metadata;
+    if (memory != nullptr)
+    {
+        munmap(memory, frame_size);
+        memory = nullptr;
+    }
     delete[] data;
 }
 
@@ -80,19 +86,23 @@ Napi::Value Image::getFrameSize(const Napi::CallbackInfo &info)
 
 Napi::Value Image::getData(const Napi::CallbackInfo &info)
 {
-    if (memory != nullptr && data != nullptr)
+    if (data != nullptr)
     {
         Napi::ArrayBuffer buf = Napi::ArrayBuffer::New(info.Env(), data, stream->configuration().frameSize, [](Napi::Env env, void *arg) {});
         return buf;
     }
 
-    memory = mmap(NULL, stream->configuration().frameSize, PROT_READ | PROT_WRITE, MAP_SHARED, buffer->planes()[0].fd.get(), 0);
-    data = new uint8_t[stream->configuration().frameSize];
-    if (memory == (void *)-1)
+    if (memory == nullptr)
     {
-        printf("mmap error : %d-%s. \r\n", errno, strerror(errno));
+        memory = mmap(NULL, frame_size, PROT_READ, MAP_SHARED, fd, 0);
+        if (memory == MAP_FAILED)
+        {
+            Napi::Error::New(info.Env(), "mmap failed").ThrowAsJavaScriptException();
+            return info.Env().Undefined();
+        }
     }
-    memcpy(data, memory, stream->configuration().frameSize);
+    data = new uint8_t[frame_size];
+    memcpy(data, memory, frame_size);
     Napi::ArrayBuffer buf = Napi::ArrayBuffer::New(info.Env(), data, stream->configuration().frameSize, [](Napi::Env env, void *arg) {});
     return buf;
 }
@@ -127,9 +137,11 @@ Napi::Value Image::save(const Napi::CallbackInfo &info)
         quality = option.Get("quality").As<Napi::Number>().Uint32Value();
     Function cb = info[1].As<Function>();
     auto plane = buffer->planes()[0];
-    void *memory = mmap(NULL, frame_size, PROT_READ | PROT_WRITE, MAP_SHARED, plane.fd.get(), 0);
+    void *map_mem = mmap(NULL, frame_size, PROT_READ, MAP_SHARED, plane.fd.get(), 0);
     uint8_t *copy_mem = new uint8_t[frame_size];
-    memcpy(copy_mem, memory, frame_size);
+    memcpy(copy_mem, map_mem, frame_size);
+    if (map_mem != MAP_FAILED)
+        munmap(map_mem, frame_size);
     auto wk = new SaveWorker(cb, type, file_name, frame_size, quality, copy_mem, metadata, stream);
     wk->Queue();
     return info.Env().Undefined();
