@@ -29,12 +29,6 @@ void Camera::clean()
     Stream::stream_config_map.clear();
     streams.clear();
     stream_index_map.clear();
-    for (auto &request : requests)
-    {
-        for (auto const &buffer_map : request->buffers())
-            delete buffer_map.second;
-        // request->buffers().clear();
-    }
     requests.clear();
     requests_deque.clear();
     wait_deque.clear();
@@ -49,6 +43,7 @@ Napi::Value Camera::getId(const Napi::CallbackInfo &info)
 
 Napi::Value Camera::basicInfo(const Napi::CallbackInfo &info)
 {
+    Napi::HandleScope scope(info.Env());
     Napi::Env env = info.Env();
     Napi::Object a = Napi::Object::New(env);
     a.Set("id", camera->id());
@@ -114,11 +109,11 @@ Napi::Value Camera::createStreams(const Napi::CallbackInfo &info)
     for (int i = 0; i < optionList.Length(); i++)
     {
         Napi::Object option = optionList.Get(i).As<Napi::Object>();
-        if (option.Has("role"))
+        if (option.Get("role").IsNumber())
         {
+            auto role = option.Get("role").As<Napi::Number>().Int32Value();
             static const std::map<int, libcamera::StreamRole> role_map = {
                 {0, libcamera::StreamRole::Raw}, {1, libcamera::StreamRole::StillCapture}, {2, libcamera::StreamRole::VideoRecording}, {3, libcamera::StreamRole::Viewfinder}};
-            auto role = option.Get("role").As<Napi::Number>().Int32Value();
             if (auto it = role_map.find(role); it != role_map.end())
                 stream_roles.push_back(it->second);
         }
@@ -128,46 +123,28 @@ Napi::Value Camera::createStreams(const Napi::CallbackInfo &info)
         camera->acquire();
         state = Acquired;
     }
-    auto config = camera->generateConfiguration(stream_roles);
-    camera_config = std::move(config);
+    camera_config = camera->generateConfiguration(stream_roles);
+    camera_config->orientation = camera_config->orientation * (vflip ? libcamera::Transform::VFlip : libcamera::Transform::Identity) *
+                                 (hflip ? libcamera::Transform::HFlip : libcamera::Transform::Identity) * libcamera::transformFromRotation(this->rotation);
 
-    if (vflip)
+    if (sensorMode.width > 0 && sensorMode.height > 0 && sensorMode.bitDepth > 0)
     {
-        libcamera::Transform transform = libcamera::Transform::VFlip;
-        camera_config->orientation = camera_config->orientation * transform;
-    }
-    if (hflip)
-    {
-        libcamera::Transform transform = libcamera::Transform::HFlip;
-        camera_config->orientation = camera_config->orientation * transform;
-    }
-    if (rotation != 0)
-    {
-        libcamera::Transform transform = libcamera::transformFromRotation(this->rotation);
-        camera_config->orientation = camera_config->orientation * transform;
+        camera_config->sensorConfig = libcamera::SensorConfiguration();
+        camera_config->sensorConfig->outputSize = libcamera::Size(sensorMode.width, sensorMode.height);
+        camera_config->sensorConfig->bitDepth = sensorMode.bitDepth;
     }
     for (int i = 0; i < optionList.Length(); i++)
     {
         Napi::Object option = optionList.Get(i).As<Napi::Object>();
         libcamera::StreamConfiguration &streamConfig = camera_config->at(i);
-        if (option.Has("width") && option.Get("width"))
+        if (option.Get("width").IsNumber())
             streamConfig.size.width = option.Get("width").As<Napi::Number>().Uint32Value();
-        if (option.Has("height") && option.Get("height").IsNumber())
+        if (option.Get("height").IsNumber())
             streamConfig.size.height = option.Get("height").As<Napi::Number>().Uint32Value();
-        if (option.Has("pixel_format") && option.Get("pixel_format").IsString())
+        if (option.Get("pixel_format").IsString())
             streamConfig.pixelFormat = libcamera::PixelFormat::fromString(option.Get("pixel_format").As<Napi::String>().Utf8Value());
-        if (option.Has("sensorMode") && option.Get("sensorMode").IsObject())
-        {
-            Napi::Object sensorModeObj = option.Get("sensorMode").As<Napi::Object>();
-            uint32_t width = sensorModeObj.Get("width").As<Napi::Number>().Uint32Value();
-            uint32_t height = sensorModeObj.Get("height").As<Napi::Number>().Uint32Value();
-            uint32_t bitDepth = sensorModeObj.Get("bitDepth").As<Napi::Number>().Uint32Value();
-            bool packed = sensorModeObj.Has("packed") ? sensorModeObj.Get("packed").As<Napi::Boolean>().Value() : false;
-
-            camera_config->sensorConfig = libcamera::SensorConfiguration();
-            camera_config->sensorConfig->outputSize = libcamera::Size(width, height);
-            camera_config->sensorConfig->bitDepth = bitDepth;
-        }
+        if (option.Has("bufferCount") && option.Get("bufferCount").IsNumber())
+            streamConfig.bufferCount = option.Get("bufferCount").As<Napi::Number>().Uint32Value();
     }
     auto status = camera_config->validate();
     camera->configure(camera_config.get());
@@ -183,20 +160,15 @@ Napi::Value Camera::createStreams(const Napi::CallbackInfo &info)
             Stream::constructor->New({Napi::Number::New(info.Env(), i), Napi::Number::New(info.Env(), streamConfig.stride), Napi::String::New(info.Env(), streamConfig.colorSpace->toString()),
                                       Napi::Number::New(info.Env(), streamConfig.frameSize), Napi::Number::New(info.Env(), streamConfig.size.width),
                                       Napi::Number::New(info.Env(), streamConfig.size.height), Napi::String::New(info.Env(), streamConfig.pixelFormat.toString())});
-        napi_stream_map[stream] = (Stream *)(&stream_obj);
         napi_stream_map[stream] = Stream::Unwrap(stream_obj);
         napi_stream_array[i] = stream_obj;
         streams.push_back(stream);
         stream_index_map[stream] = i;
         stream_config *_config = new stream_config();
         Stream::stream_config_map[i] = _config;
-        // Napi::Object option = optionList.Get(i).As<Napi::Object>();
+
         if (option.Has("onImageData") && option.Get("onImageData").IsFunction())
-        {
-            auto onImageData = option.Get("onImageData").As<Napi::Function>();
-            _config->callback_ref = Napi::Persistent(onImageData);
-        }
-        auto t1 = millis();
+            _config->callback_ref = Napi::Persistent(option.Get("onImageData").As<Napi::Function>());
         for (unsigned int j = 0; j < streamConfig.bufferCount; j++)
         {
             if (requests.size() <= j)
@@ -220,15 +192,10 @@ Napi::Value Camera::createStreams(const Napi::CallbackInfo &info)
 
 Napi::Value Camera::start(const Napi::CallbackInfo &info)
 {
+    Napi::HandleScope scope(info.Env());
     if (state == Running)
-    {
         return Napi::Number::New(info.Env(), -1);
-    }
-    if (worker)
-    {
-        delete worker;
-    }
-    worker = new FrameWorker(info, camera.get(), &wait_deque, &napi_stream_map, &stream_index_map);
+    worker = std::make_unique<FrameWorker>(info, camera.get(), &wait_deque, &napi_stream_map, &stream_index_map);
     worker->Queue();
     int ret = camera->start();
     state = Running;
@@ -266,9 +233,7 @@ void Camera::requestComplete(const Napi::CallbackInfo &info, libcamera::Request 
     }
     wait_deque.push_back(request);
     worker->notify();
-
     requests_deque.push_back(request);
-
     if (requests_deque.size() >= requests.size())
     {
         auto front = requests_deque.front();
@@ -282,25 +247,28 @@ void Camera::requestComplete(const Napi::CallbackInfo &info, libcamera::Request 
     }
 }
 
+void Camera::setCrop(Napi::Object _crop)
+{
+    auto sensor_area = camera->properties().get(libcamera::properties::ScalerCropMaximum);
+    float roi_x = _crop.Get("roi_x").As<Napi::Number>().FloatValue();
+    float roi_y = _crop.Get("roi_y").As<Napi::Number>().FloatValue();
+    float roi_width = _crop.Get("roi_width").As<Napi::Number>().FloatValue();
+    float roi_height = _crop.Get("roi_height").As<Napi::Number>().FloatValue();
+    int x = roi_x * sensor_area->width;
+    int y = crop.roi_y * sensor_area->height;
+    int w = crop.roi_width * sensor_area->width;
+    int h = crop.roi_height * sensor_area->height;
+    libcamera::Rectangle crop(x, y, w, h);
+    crop.translateBy(sensor_area->topLeft());
+    control_list.set(libcamera::controls::ScalerCrop, crop);
+}
+
 Napi::Value Camera::setControl(const Napi::CallbackInfo &info)
 {
+    Napi::HandleScope scope(info.Env());
     auto option = info[0].As<Napi::Object>();
     if (option.Get("crop").IsObject())
-    {
-        auto _crop = option.Get("crop").As<Napi::Object>();
-        auto sensor_area = camera->properties().get(libcamera::properties::ScalerCropMaximum);
-        float roi_x = _crop.Get("roi_x").As<Napi::Number>().FloatValue();
-        float roi_y = _crop.Get("roi_y").As<Napi::Number>().FloatValue();
-        float roi_width = _crop.Get("roi_width").As<Napi::Number>().FloatValue();
-        float roi_height = _crop.Get("roi_height").As<Napi::Number>().FloatValue();
-        int x = roi_x * sensor_area->width;
-        int y = crop.roi_y * sensor_area->height;
-        int w = crop.roi_width * sensor_area->width;
-        int h = crop.roi_height * sensor_area->height;
-        libcamera::Rectangle crop(x, y, w, h);
-        crop.translateBy(sensor_area->topLeft());
-        control_list.set(libcamera::controls::ScalerCrop, crop);
-    }
+        setCrop(option.Get("crop").As<Napi::Object>());
     if (option.Get("ExposureTime").IsNumber())
         control_list.set(libcamera::controls::ExposureTime, option.Get("ExposureTime").As<Napi::Number>().Int64Value());
     if (option.Get("AnalogueGain").IsNumber())
@@ -331,67 +299,40 @@ Napi::Value Camera::setControl(const Napi::CallbackInfo &info)
         control_list.set(libcamera::controls::AfMode, option.Get("AfMode").As<Napi::Number>().Int32Value());
     if (option.Get("AfTrigger").IsNumber())
         control_list.set(libcamera::controls::AfTrigger, option.Get("AfTrigger").As<Napi::Number>().Int32Value());
-
     return info.Env().Undefined();
 }
 
 Napi::Value Camera::config(const Napi::CallbackInfo &info)
 {
+    Napi::HandleScope scope(info.Env());
     auto option = info[0].As<Napi::Object>();
     if (option.Get("autoQueueRequest").IsBoolean())
         this->auto_queue_request = option.Get("autoQueueRequest").As<Napi::Boolean>();
-
     if (option.Get("maxFrameRate").IsNumber())
     {
         max_frame_rate = option.Get("maxFrameRate").As<Napi::Number>().FloatValue();
         int64_t frame_time = 1000000 / max_frame_rate; // in us
         control_list.set(libcamera::controls::FrameDurationLimits, libcamera::Span<const int64_t, 2>({frame_time, frame_time}));
     }
-
     if (option.Get("crop").IsObject())
-    {
-        auto _crop = option.Get("crop").As<Napi::Object>();
-        this->crop.roi_x = _crop.Get("roi_x").As<Napi::Number>().FloatValue();
-        this->crop.roi_y = _crop.Get("roi_y").As<Napi::Number>().FloatValue();
-        this->crop.roi_width = _crop.Get("roi_width").As<Napi::Number>().FloatValue();
-        this->crop.roi_height = _crop.Get("roi_height").As<Napi::Number>().FloatValue();
-        auto sensor_area = camera->properties().get(libcamera::properties::ScalerCropMaximum);
-        int x = this->crop.roi_x * sensor_area->width;
-        int y = this->crop.roi_y * sensor_area->height;
-        int w = this->crop.roi_width * sensor_area->width;
-        int h = this->crop.roi_height * sensor_area->height;
-        libcamera::Rectangle crop(x, y, w, h);
-        crop.translateBy(sensor_area->topLeft());
-        control_list.set(libcamera::controls::ScalerCrop, crop);
-    }
+        setCrop(option.Get("crop").As<Napi::Object>());
     if (option.Get("vflip").IsBoolean())
-    {
-        std::cout << "vflip" << std::endl;
         this->vflip = option.Get("vflip").As<Napi::Boolean>();
-        if (camera_config != nullptr)
-        {
-            std::cout << "set up vflip " << std::endl;
-            libcamera::Transform transform = libcamera::Transform::VFlip;
-            camera_config->orientation = camera_config->orientation * transform;
-        }
-    }
     if (option.Get("hflip").IsBoolean())
-    {
         this->hflip = option.Get("hflip").As<Napi::Boolean>();
-        if (camera_config != nullptr)
-        {
-            libcamera::Transform transform = libcamera::Transform::HFlip;
-            camera_config->orientation = camera_config->orientation * transform;
-        }
-    }
     if (option.Get("rotation").IsNumber())
-    {
         this->rotation = option.Get("rotation").As<Napi::Number>().Int32Value();
-        if (camera_config != nullptr)
-        {
-            libcamera::Transform transform = libcamera::transformFromRotation(this->rotation);
-            camera_config->orientation = camera_config->orientation * transform;
-        }
+    if (option.Get("sensorMode").IsObject())
+    {
+        auto _sensorMode = option.Get("sensorMode").As<Napi::Object>();
+        if (_sensorMode.Get("width").IsNumber())
+            sensorMode.width = _sensorMode.Get("width").As<Napi::Number>().Uint32Value();
+        if (_sensorMode.Get("height").IsNumber())
+            sensorMode.height = _sensorMode.Get("height").As<Napi::Number>().Uint32Value();
+        if (_sensorMode.Get("bitDepth").IsNumber())
+            sensorMode.bitDepth = _sensorMode.Get("bitDepth").As<Napi::Number>().Uint32Value();
+        if (_sensorMode.Get("packed").IsBoolean())
+            sensorMode.packed = _sensorMode.Get("packed").As<Napi::Boolean>();
     }
     return Napi::Number::New(info.Env(), 0);
 }
@@ -423,6 +364,7 @@ Napi::Value Camera::sendRequest(const Napi::CallbackInfo &info)
 
 Napi::Value Camera::getAvailableControls(const Napi::CallbackInfo &info)
 {
+    Napi::HandleScope scope(info.Env());
     auto control_map = camera->controls();
     Napi::Object obj = Napi::Object::New(info.Env());
     for (auto const &[id, info] : control_map)
@@ -438,7 +380,6 @@ Napi::Value Camera::stop(const Napi::CallbackInfo &info)
     camera->stop();
     state = Configured;
     worker->stop();
-    worker = nullptr;
     return Napi::Boolean::New(info.Env(), true);
 }
 
