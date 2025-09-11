@@ -26,8 +26,9 @@ Napi::Value Stream::configStream(const Napi::CallbackInfo &info)
     if (option.Has("onImageData") && option.Get("onImageData").IsFunction())
     {
         Napi::Function onImageData = option.Get("onImageData").As<Napi::Function>();
-        // 更新或设置回调函数
-        stream_config_map[index]->callback_ref = Napi::Persistent(onImageData);
+        // 直接更新当前 Stream 实例的回调
+        callback_ref.Reset(); // 释放旧的回调
+        callback_ref = Napi::Persistent(onImageData);
     }
 
     return Napi::Number::New(info.Env(), 0);
@@ -95,5 +96,3 @@ Napi::Object Stream::Init(Napi::Env env, Napi::Object exports)
     exports.Set("Stream", func);
     return exports;
 }
-
-std::map<unsigned int, stream_config *> Stream::stream_config_map;

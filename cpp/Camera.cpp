@@ -22,6 +22,15 @@ Camera::~Camera()
 
 void Camera::clean()
 {
+    // Manually delete FrameBuffers associated with requests
+    for (auto &req : requests)
+    {
+        for (auto const &[stream, buffer] : req->buffers())
+        {
+            delete buffer;
+        }
+    }
+
     streams.clear();
     // 释放对 Stream 对象的持久化引用，允许它们被 GC
     for (auto &pair : napi_stream_map)

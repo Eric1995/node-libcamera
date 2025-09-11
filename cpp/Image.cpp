@@ -1,6 +1,6 @@
 #include "Image.h"
 
-SaveWorker::SaveWorker(Function &callback, uint8_t _type, std::string _filename, uint32_t _frame_size, uint8_t _quality, uint8_t *_plane_data, libcamera::ControlList *_metadata,
+SaveWorker::SaveWorker(Function &callback, uint8_t _type, std::string _filename, uint32_t _frame_size, uint8_t _quality, uint8_t *_plane_data, const libcamera::ControlList &_metadata,
                        libcamera::Stream *_stream)
     : AsyncWorker(callback), type(_type), filename(_filename), frame_size(_frame_size), quality(_quality), plane_data(_plane_data), metadata(_metadata), stream(_stream)
 {
@@ -22,12 +22,12 @@ void SaveWorker::Execute()
     StillOptions *options = new StillOptions();
     if (type == 1)
     {
-        dng_save(vec, stream_info, *metadata, file_name, "picam", options);
+        dng_save(vec, stream_info, metadata, file_name, "picam", options);
     }
     if (type == 2)
     {
         options->quality = quality;
-        jpeg_save(vec, stream_info, *metadata, file_name, "picam", options);
+        jpeg_save(vec, stream_info, metadata, file_name, "picam", options);
     }
     if (type == 3)
     {
@@ -140,7 +140,7 @@ Napi::Value Image::save(const Napi::CallbackInfo &info)
     memcpy(copy_mem, map_mem, frame_size);
     if (map_mem != MAP_FAILED)
         munmap(map_mem, frame_size);
-    auto wk = new SaveWorker(cb, type, file_name, frame_size, quality, copy_mem, metadata, stream);
+    auto wk = new SaveWorker(cb, type, file_name, frame_size, quality, copy_mem, *metadata, stream);
     wk->Queue();
     return info.Env().Undefined();
 }

@@ -12,7 +12,8 @@ using WorkerType = void *;
 class SaveWorker : public AsyncWorker
 {
   public:
-    SaveWorker(Function &callback, uint8_t _type, std::string _filename, uint32_t _frame_size, uint8_t _quality, uint8_t *_plane_data, libcamera::ControlList *_metadata, libcamera::Stream *_stream);
+    SaveWorker(Function &callback, uint8_t _type, std::string _filename, uint32_t _frame_size, uint8_t _quality, uint8_t *_plane_data, const libcamera::ControlList &_metadata,
+               libcamera::Stream *_stream);
 
     ~SaveWorker();
     void Execute() override;
@@ -23,7 +24,7 @@ class SaveWorker : public AsyncWorker
     uint8_t type;
     uint8_t quality;
     uint8_t *plane_data;
-    libcamera::ControlList *metadata;
+    libcamera::ControlList metadata;
     std::string filename;
     uint32_t frame_size;
     libcamera::Stream *stream;

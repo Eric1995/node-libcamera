@@ -6,11 +6,6 @@
 
 using namespace Napi;
 
-struct stream_config
-{
-    FunctionReference callback_ref;
-};
-
 class Stream : public Napi::ObjectWrap<Stream>
 {
   private:
@@ -23,7 +18,6 @@ class Stream : public Napi::ObjectWrap<Stream>
     FunctionReference callback_ref;
 
     libcamera::StreamConfiguration *streamConfiguration;
-    static std::map<unsigned int, stream_config *> stream_config_map;
     Stream(const Napi::CallbackInfo &info);
     ~Stream();
     Napi::Value configStream(const Napi::CallbackInfo &info);
