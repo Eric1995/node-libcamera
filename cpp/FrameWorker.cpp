@@ -18,9 +18,7 @@ void FrameWorker::Execute(const ExecutionProgress &progress)
         frame_available.wait(lck);
         progress.Signal();
         if (stopped)
-        {
             break;
-        }
     }
 }
 
@@ -40,7 +38,7 @@ void FrameWorker::OnProgress(const WorkerType *data, size_t /* count */)
     while (cache_queue->size())
     {
         auto request = cache_queue->front();
-        auto req_addr = Napi::BigInt::New(Env(), reinterpret_cast<uint64_t>(request));
+        // auto req_addr = Napi::BigInt::New(Env(), reinterpret_cast<uint64_t>(request));
         cache_queue->pop_front();
         for (auto &pair : request->buffers())
         {

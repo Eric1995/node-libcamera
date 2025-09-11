@@ -30,24 +30,35 @@ struct crop_t
     float roi_height = 1;
 };
 
+struct sensor_mode
+{
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint32_t bitDepth = 0;
+    bool packed = true;
+};
+
+enum Status
+{
+    Available,
+    Acquired,
+    Configured,
+    Stopping,
+    Running
+};
+
 class Camera : public Napi::ObjectWrap<Camera>
 {
   private:
-    FrameWorker *worker = nullptr;
-    enum Status
-    {
-        Available,
-        Acquired,
-        Configured,
-        Stopping,
-        Running
-    };
+    std::unique_ptr<FrameWorker> worker;
+
     Status state = Available;
     uint32_t num = 0;
     std::shared_ptr<libcamera::CameraManager> cm;
     std::shared_ptr<libcamera::Camera> camera;
     bool queued = false;
     bool released = false;
+    sensor_mode sensorMode;
 
     /** 是否自动发送request请求*/
     bool auto_queue_request = true;
@@ -68,6 +79,8 @@ class Camera : public Napi::ObjectWrap<Camera>
     std::map<libcamera::Stream *, unsigned int> stream_index_map;
 
     DmaHeap dma_heap_;
+
+    void setCrop(Napi::Object crop);
 
   public:
     static Napi::FunctionReference *constructor;
@@ -102,5 +115,3 @@ class Camera : public Napi::ObjectWrap<Camera>
 
     static Napi::Object Init(Napi::Env env, Napi::Object exports);
 };
-
-// Napi::FunctionReference *Camera::constructor = new Napi::FunctionReference();
