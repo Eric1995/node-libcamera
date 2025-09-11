@@ -1,28 +1,15 @@
 #include "Stream.h"
 
-// std::map<unsigned int, stream_config *> Stream::stream_config_map;
-
 Stream::Stream(const Napi::CallbackInfo &info) : Napi::ObjectWrap<Stream>(info)
 {
-    // bool lossless = true;
     index = info[0].As<Napi::Number>().Uint32Value();
-    stride = info[1].As<Napi::Number>().Uint32Value();
-    colorSpace = libcamera::ColorSpace::fromString(info[2].As<Napi::String>());
-    frameSize = info[3].As<Napi::Number>().Uint32Value();
-    uint32_t width = info[4].As<Napi::Number>().Uint32Value();
-    uint32_t height = info[5].As<Napi::Number>().Uint32Value();
-    size = new libcamera::Size(width, height);
-    pixelFormat = info[6].As<Napi::String>();
+    streamConfiguration = *info[1].As<Napi::External<libcamera::StreamConfiguration>>().Data();
     config = new stream_config();
-    // camera = reinterpret_cast<libcamera::Camera *>(info[1].As<Napi::BigInt>().Int64Value(&lossless));
-    // camera_config = reinterpret_cast<libcamera::CameraConfiguration *>(info[2].As<Napi::BigInt>().Int64Value(&lossless));
-    // requests = reinterpret_cast<std::deque<std::unique_ptr<libcamera::Request>> *>(info[3].As<Napi::BigInt>().Int64Value(&lossless));
-    // stream_configuration = reinterpret_cast<libcamera::StreamConfiguration *>(info[3].As<Napi::BigInt>().Int64Value(&lossless));
-    // stream_config_map = reinterpret_cast<std::map<libcamera::Stream *, stream_config *> *>(info[4].As<Napi::BigInt>().Int64Value(&lossless));
 }
 Stream::~Stream()
 {
-    delete size;
+    // The stream_config is managed by Camera::clean()
+    // delete config;
 }
 Napi::Value Stream::configStream(const Napi::CallbackInfo &info)
 {
@@ -53,32 +40,32 @@ Napi::Value Stream::configStream(const Napi::CallbackInfo &info)
 
 Napi::Value Stream::getStride(const Napi::CallbackInfo &info)
 {
-    return Napi::Number::New(info.Env(), stride);
+    return Napi::Number::New(info.Env(), streamConfiguration.stride);
 }
 
 Napi::Value Stream::getColorSpace(const Napi::CallbackInfo &info)
 {
-    return Napi::String::New(info.Env(), colorSpace->toString());
+    return Napi::String::New(info.Env(), streamConfiguration.colorSpace->toString());
 }
 Napi::Value Stream::getPixelFormat(const Napi::CallbackInfo &info)
 {
-    return Napi::String::New(info.Env(), libcamera::PixelFormat::fromString(pixelFormat).toString());
+    return Napi::String::New(info.Env(), streamConfiguration.pixelFormat.toString());
 }
 Napi::Value Stream::getPixelFormatcc(const Napi::CallbackInfo &info)
 {
-    return Napi::Number::New(info.Env(), libcamera::PixelFormat::fromString(pixelFormat).fourcc());
+    return Napi::Number::New(info.Env(), streamConfiguration.pixelFormat.fourcc());
 }
 Napi::Value Stream::getFrameSize(const Napi::CallbackInfo &info)
 {
-    return Napi::Number::New(info.Env(), frameSize);
+    return Napi::Number::New(info.Env(), streamConfiguration.frameSize);
 }
 Napi::Value Stream::getWidth(const Napi::CallbackInfo &info)
 {
-    return Napi::Number::New(info.Env(), size->width);
+    return Napi::Number::New(info.Env(), streamConfiguration.size.width);
 }
 Napi::Value Stream::getHeight(const Napi::CallbackInfo &info)
 {
-    return Napi::Number::New(info.Env(), size->height);
+    return Napi::Number::New(info.Env(), streamConfiguration.size.height);
 }
 Napi::Value Stream::getStreamIndex(const Napi::CallbackInfo &info)
 {

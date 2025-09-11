@@ -25,15 +25,15 @@ class Stream : public Napi::ObjectWrap<Stream>
     uint8_t data_format = 1;
     FunctionReference *callback_ref;
 
-    unsigned int stride;
-    std::optional<libcamera::ColorSpace> colorSpace;
-    std::string pixelFormat;
-    unsigned int frameSize;
-    libcamera::Size *size;
+    // unsigned int stride;
+    // std::optional<libcamera::ColorSpace> colorSpace;
+    // std::string pixelFormat;
+    // unsigned int frameSize;
+    // libcamera::Size *size;
 
     // libcamera::CameraConfiguration *camera_config;
     // std::deque<std::unique_ptr<libcamera::Request>> *requests;
-    libcamera::StreamConfiguration *stream_configuration;
+    libcamera::StreamConfiguration streamConfiguration;
     static std::map<unsigned int, stream_config *> stream_config_map;
 
     stream_config *config;

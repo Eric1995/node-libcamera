@@ -90,11 +90,9 @@ Napi::Value Camera::createStreams(const Napi::CallbackInfo &info)
     {
         Napi::Object option = optionList.Get(i).As<Napi::Object>();
         libcamera::StreamConfiguration &streamConfig = camera_config->at(i);
+        auto external_config = Napi::External<libcamera::StreamConfiguration>::New(info.Env(), &streamConfig);
+        auto stream_obj = Stream::constructor->New({Napi::Number::New(info.Env(), i), external_config});
         auto stream = streamConfig.stream();
-        auto stream_obj =
-            Stream::constructor->New({Napi::Number::New(info.Env(), i), Napi::Number::New(info.Env(), streamConfig.stride), Napi::String::New(info.Env(), streamConfig.colorSpace->toString()),
-                                      Napi::Number::New(info.Env(), streamConfig.frameSize), Napi::Number::New(info.Env(), streamConfig.size.width),
-                                      Napi::Number::New(info.Env(), streamConfig.size.height), Napi::String::New(info.Env(), streamConfig.pixelFormat.toString())});
         napi_stream_map[stream] = Stream::Unwrap(stream_obj);
         napi_stream_array[i] = stream_obj;
         streams.push_back(stream);
