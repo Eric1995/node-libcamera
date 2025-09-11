@@ -1,25 +1,4 @@
-#ifndef _CAMERA_MANAGER_H_
-#define _CAMERA_MANAGER_H_ 1
-#include <libcamera/libcamera.h>
-#include <memory>
-#include <napi.h>
-
-#include "Camera.hpp"
-
-class CameraManager : public Napi::ObjectWrap<CameraManager>
-{
-  public:
-    std::shared_ptr<libcamera::CameraManager> cm;
-    static Napi::FunctionReference *constructor;
-    static Napi::Object Init(Napi::Env env, Napi::Object exports);
-    CameraManager(const Napi::CallbackInfo &info);
-    static Napi::Value CreateNewItem(const Napi::CallbackInfo &info);
-    std::vector<Napi::Reference<Napi::Object>> cameras;
-
-  private:
-    Napi::Value GetCameras(const Napi::CallbackInfo &info);
-};
-Napi::FunctionReference *CameraManager::constructor = new Napi::FunctionReference();
+#include "CameraManager.h"
 
 Napi::Object CameraManager::Init(Napi::Env env, Napi::Object exports)
 {
@@ -75,5 +54,3 @@ Napi::Value CameraManager::CreateNewItem(const Napi::CallbackInfo &info)
     //       info.Env().GetInstanceData<Napi::FunctionReference>();
     return constructor->New({});
 }
-
-#endif

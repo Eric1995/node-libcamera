@@ -5,7 +5,7 @@
  * dma_heaps.cpp - Helper class for dma-heap allocations.
  */
 
-#include "dma_heaps.hpp"
+#include "dma_heaps.h"
 
 #include <array>
 #include <fcntl.h>
