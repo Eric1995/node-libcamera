@@ -10,6 +10,7 @@
             "sources": [
                 "cpp/index.cpp", 
                 "cpp/Camera.cpp",
+                "cpp/CameraMethods.cpp",
                 "cpp/CameraManager.cpp",
                 "cpp/Stream.cpp",
                 "cpp/Image.cpp",
