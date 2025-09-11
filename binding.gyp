@@ -9,6 +9,12 @@
             "target_name": "liblibcamera",
             "sources": [
                 "cpp/index.cpp", 
+                "cpp/Camera.cpp",
+                "cpp/CameraManager.cpp",
+                "cpp/Stream.cpp",
+                "cpp/Image.cpp",
+                "cpp/FrameWorker.cpp",
+                "cpp/utils/util.cpp",
                 "cpp/utils/dma_heaps.cpp", 
                 "cpp/image/dng.cpp", 
                 "cpp/image/jpeg.cpp", 
@@ -20,7 +26,8 @@
                 "/usr/local/include/libcamera",
                 "/usr/include/libcamera",
                 "/opt/libjpeg-turbo/include",
-                "./include"
+                "./include",
+                "./cpp"
             ],
             "dependencies": [
                 "<!@(node -p \"require('node-addon-api').gyp\")"

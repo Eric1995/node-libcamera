@@ -11,9 +11,9 @@
     "build:ts": "tsx ./esbuild.config.ts",
     "build:playground": "tsx ./esbuild.config.ts --playground",
     "configure": "node-gyp configure",
-    "configure:arm64": "FLAG=CROSS TARGET_ARCH=aarch64 node-gyp configure",
+    "configure:arm64": "FLAG=CROSS TARGET_ARCH=arm64 node-gyp configure",
     "build:napi": "CC=clang CXX=clang++ node-gyp build --jobs=8;",
-    "build:napi:arm64": "CC=clang CXX=clang++ FLAG=CROSS TARGET_ARCH=aarch64 node-gyp build --jobs=8;",
+    "build:napi:arm64": "CC=clang CXX=clang++ FLAG=CROSS TARGET_ARCH=arm64 node-gyp build --jobs=8;",
     "build": "npm run build:napi; npm run build:ts; npm run build:playground;",
     "build:arm64": "npm run build:napi:arm64 && npm run build:ts && npm run build:playground;"
   },
@@ -53,5 +53,8 @@
     "rimraf": "^6.0.1",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "node-pi-h264-encoder": "link:../../.local/share/pnpm/global/5/node_modules/node-pi-h264-encoder"
   }
 }
