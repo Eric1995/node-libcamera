@@ -23,8 +23,6 @@ static const std::map<libcamera::PixelFormat, unsigned int> bayer_formats = {
     {libcamera::formats::SGBRG16, 16},
 };
 
-libcamera::CameraManager cm;
-
 struct crop_t
 {
     float roi_x = 0;
@@ -47,6 +45,7 @@ class Camera : public Napi::ObjectWrap<Camera>
     };
     Status state = Available;
     uint32_t num = 0;
+    std::shared_ptr<libcamera::CameraManager> cm;
     std::shared_ptr<libcamera::Camera> camera;
     bool queued = false;
     bool released = false;
@@ -76,11 +75,8 @@ class Camera : public Napi::ObjectWrap<Camera>
 
     Camera(const Napi::CallbackInfo &info) : Napi::ObjectWrap<Camera>(info)
     {
-        auto num = info[0].As<Napi::Number>().Uint32Value();
-        this->num = num;
-        auto libcameras = cm.cameras();
-        auto camera = libcameras[num];
-        this->camera = camera;
+        this->cm = *info[0].As<Napi::External<std::shared_ptr<libcamera::CameraManager>>>().Data();
+        this->camera = *info[1].As<Napi::External<std::shared_ptr<libcamera::Camera>>>().Data();
     }
 
     ~Camera()
