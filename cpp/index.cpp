@@ -5,8 +5,6 @@
 #include "Image.h"
 #include "Stream.h"
 
-Napi::FunctionReference *CameraManager::constructor = new Napi::FunctionReference();
-
 // Initialize native add-on
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {

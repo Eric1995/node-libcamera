@@ -37,7 +37,7 @@ class Image : public Napi::ObjectWrap<Image>
     libcamera::Request *request;
 
   public:
-    static Napi::FunctionReference *constructor;
+    static Napi::FunctionReference constructor;
     // libcamera::Camera *camera;
     // libcamera::Request *request;
     int fd;

@@ -1,9 +1,5 @@
 #include "Camera.h"
 
-Napi::FunctionReference *Stream::constructor = new Napi::FunctionReference();
-Napi::FunctionReference *Image::constructor = new Napi::FunctionReference();
-Napi::FunctionReference *Camera::constructor = new Napi::FunctionReference();
-
 Camera::Camera(const Napi::CallbackInfo &info) : Napi::ObjectWrap<Camera>(info)
 {
     this->cm = *info[0].As<Napi::External<std::shared_ptr<libcamera::CameraManager>>>().Data();
@@ -20,8 +16,34 @@ Camera::~Camera()
     clean();
 }
 
+Napi::Value Camera::stop(const Napi::CallbackInfo &info)
+{
+    if (state == Available || state == Stopping)
+        return Napi::Boolean::New(info.Env(), true);
+    state = Stopping;
+    camera->stop();
+    if (frame_worker)
+    {
+        frame_worker->stop();
+    }
+    state = Configured;
+    return Napi::Boolean::New(info.Env(), true);
+}
+
+Napi::Value Camera::release(const Napi::CallbackInfo &info)
+{
+    camera->release();
+    state = Available;
+    return Napi::Boolean::New(info.Env(), true);
+}
+
 void Camera::clean()
 {
+    // 确保在camera对象销毁时，worker也被正确停止和清理
+    if (frame_worker)
+    {
+        frame_worker->stop();
+    }
     // Manually delete FrameBuffers associated with requests
     for (auto &req : requests)
     {
@@ -107,7 +129,7 @@ Napi::Value Camera::createStreams(const Napi::CallbackInfo &info)
             onImageData = option.Get("onImageData");
         }
         auto external_config = Napi::External<libcamera::StreamConfiguration>::New(info.Env(), &streamConfig);
-        auto stream_obj = Stream::constructor->New({Napi::Number::New(info.Env(), i), external_config, onImageData});
+        auto stream_obj = Stream::constructor.New({Napi::Number::New(info.Env(), i), external_config, onImageData});
         auto stream = streamConfig.stream();
         napi_stream_map[stream] = Napi::Persistent(stream_obj);
         napi_stream_map[stream].SuppressDestruct(); // 因为它由 map 管理，在 clean() 中手动释放
@@ -141,8 +163,8 @@ Napi::Value Camera::start(const Napi::CallbackInfo &info)
     Napi::HandleScope scope(info.Env());
     if (state == Running)
         return Napi::Number::New(info.Env(), -1);
-    worker = std::make_unique<FrameWorker>(info, &wait_deque, &napi_stream_map);
-    worker->Queue();
+    frame_worker = new FrameWorker(info, &wait_deque, &napi_stream_map); // 保持现有逻辑，但注意内存管理
+    frame_worker->Queue();
     int ret = camera->start();
     state = Running;
     requests_deque.clear();
@@ -178,7 +200,7 @@ void Camera::requestComplete(const Napi::CallbackInfo &info, libcamera::Request 
             throw std::runtime_error("failed to sync dma buf on request complete");
     }
     wait_deque.push_back(request);
-    worker->notify();
+    frame_worker->notify();
     requests_deque.push_back(request);
     if (requests_deque.size() >= requests.size())
     {
@@ -218,20 +240,4 @@ Napi::Value Camera::sendRequest(const Napi::CallbackInfo &info)
     return Napi::Number::New(info.Env(), 0);
 }
 
-Napi::Value Camera::stop(const Napi::CallbackInfo &info)
-{
-    if (state == Available || state == Stopping)
-        return Napi::Boolean::New(info.Env(), true);
-    state = Stopping;
-    camera->stop();
-    state = Configured;
-    worker->stop();
-    return Napi::Boolean::New(info.Env(), true);
-}
-
-Napi::Value Camera::release(const Napi::CallbackInfo &info)
-{
-    camera->release();
-    state = Available;
-    return Napi::Boolean::New(info.Env(), true);
-}
+Napi::FunctionReference Camera::constructor;

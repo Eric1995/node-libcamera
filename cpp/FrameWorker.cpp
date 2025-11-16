@@ -46,7 +46,7 @@ void FrameWorker::OnProgress(const WorkerType *data, size_t /* count */)
             auto mStream = Stream::Unwrap(stream_obj);
             auto external_stream = Napi::External<libcamera::Stream>::New(Env(), stream);
             auto external_request = Napi::External<libcamera::Request>::New(Env(), request);
-            Napi::Object image = Image::constructor->New({external_stream, external_request});
+            Napi::Object image = Image::constructor.New({external_stream, external_request});
             auto &callback = mStream->callback_ref;
             if (callback && !callback.IsEmpty())
                 callback.Call({Env().Null(), Env().Null(), image});

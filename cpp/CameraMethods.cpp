@@ -180,7 +180,7 @@ Napi::Object Camera::Init(Napi::Env env, Napi::Object exports)
                                           InstanceMethod<&Camera::release>("release", static_cast<napi_property_attributes>(napi_enumerable)),
                                           InstanceMethod<&Camera::setControl>("setControl", static_cast<napi_property_attributes>(napi_enumerable)),
                                       });
-    *constructor = Napi::Persistent(func);
+    constructor = Napi::Persistent(func);
     exports.Set("Camera", func);
     return exports;
 }

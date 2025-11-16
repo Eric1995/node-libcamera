@@ -50,7 +50,7 @@ enum Status
 class Camera : public Napi::ObjectWrap<Camera>
 {
   private:
-    std::unique_ptr<FrameWorker> worker;
+    FrameWorker *frame_worker = nullptr; // 用于调用 stop() 的原始指针
 
     Status state = Available;
     uint32_t num = 0;
@@ -84,7 +84,7 @@ class Camera : public Napi::ObjectWrap<Camera>
     void setCrop(Napi::Object crop);
 
   public:
-    static Napi::FunctionReference *constructor;
+    static Napi::FunctionReference constructor;
 
     Camera(const Napi::CallbackInfo &info);
 

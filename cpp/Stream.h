@@ -10,7 +10,7 @@ class Stream : public Napi::ObjectWrap<Stream>
 {
   private:
   public:
-    static Napi::FunctionReference *constructor;
+    static Napi::FunctionReference constructor;
     int index = -1;
 
     bool auto_queue_request = false;

@@ -10,7 +10,7 @@ Napi::Object CameraManager::Init(Napi::Env env, Napi::Object exports)
                                       });
 
     // Napi::FunctionReference *constructor = new Napi::FunctionReference();
-    *constructor = Napi::Persistent(func);
+    constructor = Napi::Persistent(func);
     exports.Set("CameraManager", func);
     // env.SetInstanceData<Napi::FunctionReference>(constructor);
     return exports;
@@ -29,7 +29,7 @@ CameraManager::CameraManager(const Napi::CallbackInfo &info) : Napi::ObjectWrap<
     {
         auto external_cam_mgr = Napi::External<std::shared_ptr<libcamera::CameraManager>>::New(env, &this->cm);
         auto external_cam = Napi::External<std::shared_ptr<libcamera::Camera>>::New(env, &libcam);
-        auto cam = Camera::constructor->New({external_cam_mgr, external_cam});
+        auto cam = Camera::constructor.New({external_cam_mgr, external_cam});
         auto objRef = Napi::ObjectReference::New(cam);
         cameras.push_back(std::move(objRef));
     }
@@ -52,5 +52,6 @@ Napi::Value CameraManager::CreateNewItem(const Napi::CallbackInfo &info)
 {
     //   Napi::FunctionReference* constructor =
     //       info.Env().GetInstanceData<Napi::FunctionReference>();
-    return constructor->New({});
+    return constructor.New({});
 }
+Napi::FunctionReference CameraManager::constructor;

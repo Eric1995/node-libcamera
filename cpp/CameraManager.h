@@ -9,7 +9,7 @@ class CameraManager : public Napi::ObjectWrap<CameraManager>
 {
   public:
     std::shared_ptr<libcamera::CameraManager> cm;
-    static Napi::FunctionReference *constructor;
+    static Napi::FunctionReference constructor;
     static Napi::Object Init(Napi::Env env, Napi::Object exports);
     CameraManager(const Napi::CallbackInfo &info);
     static Napi::Value CreateNewItem(const Napi::CallbackInfo &info);

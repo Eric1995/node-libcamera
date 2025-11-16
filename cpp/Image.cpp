@@ -62,7 +62,6 @@ Image::Image(const Napi::CallbackInfo &info) : Napi::ObjectWrap<Image>(info)
 
 Image::~Image()
 {
-    // printf("Image object destroyed for request %p\n", request);
     delete metadata;
     if (memory != nullptr)
     {
@@ -158,7 +157,9 @@ Napi::Object Image::Init(Napi::Env env, Napi::Object exports)
                                           InstanceAccessor<&Image::getPixelFormatFourcc>("pixelFormatFourcc", static_cast<napi_property_attributes>(napi_enumerable)),
                                           InstanceMethod<&Image::save>("save", static_cast<napi_property_attributes>(napi_enumerable)),
                                       });
-    *constructor = Napi::Persistent(func);
+    constructor = Napi::Persistent(func);
     exports.Set("Image", func);
     return exports;
 }
+
+Napi::FunctionReference Image::constructor;

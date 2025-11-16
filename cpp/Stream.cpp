@@ -15,7 +15,6 @@ Stream::Stream(const Napi::CallbackInfo &info) : Napi::ObjectWrap<Stream>(info)
 
 Stream::~Stream()
 {
-    printf("!!! Stream object %d destroyed !!!\n", index);
     callback_ref.Reset();
 }
 
@@ -92,7 +91,9 @@ Napi::Object Stream::Init(Napi::Env env, Napi::Object exports)
                                           InstanceAccessor<&Stream::getStreamIndex>("streamIndex", static_cast<napi_property_attributes>(napi_enumerable)),
                                           InstanceMethod<&Stream::configStream>("configStream", static_cast<napi_property_attributes>(napi_writable | napi_configurable | napi_enumerable)),
                                       });
-    *constructor = Napi::Persistent(func);
+    constructor = Napi::Persistent(func);
     exports.Set("Stream", func);
     return exports;
 }
+
+Napi::FunctionReference Stream::constructor;
