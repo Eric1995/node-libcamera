@@ -176,6 +176,7 @@ export interface RawCamera {
     hflip?: boolean;
     vflip?: boolean;
     rotation?: number;
+    sensorMode?: { width: number; height: number; bitDepth: number; packed?: boolean };
     crop?: {
       roi_x: number;
       roi_y: number;

@@ -53,7 +53,7 @@ class Stream {
        * 1: fd only;
        * @default 1
        */
-      dataOutputType?: 0 | 1;
+      // dataOutputType?: 0 | 1;
       onImageData?: (err: unknown, ok: boolean, image: Image) => void;
     },
   ) {

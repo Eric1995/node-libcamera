@@ -1,6 +1,6 @@
 import Image from './Image';
 import Stream from './Stream';
-import type { PixelFormat, RawCamera, StreamRole } from './types';
+import type { PixelFormat, RawCamera, RawCameraImage, StreamRole } from './types';
 
 class Camera {
   private camera: RawCamera;
@@ -26,23 +26,31 @@ class Camera {
       vflip?: boolean;
       hflip?: boolean;
       rotation?: number;
-      sensorMode?: { width: number; height: number; bitDepth: number; packed?: boolean };
+      bufferCount?: number;
       onImageData?: (err: unknown, ok: boolean, image: Image) => void;
     }[],
   ) {
-    const _option: Omit<(typeof option)[number], 'onImageData'>[] = option.map((o) => {
-      const _o = Object.assign({}, o);
-      delete _o.onImageData;
+    // overwrite onImageData
+    const _option = option.map((o) => {
+      // const _originalCall = o.onImageData;
+      const _o = Object.assign({}, o) as Omit<typeof o, 'onImageData'> & {
+        onImageData?: Parameters<RawCamera['createStreams']>[0][number]['onImageData'];
+      };
+      if (!o.onImageData) return _o;
+      _o.onImageData = (err, ok, image) => {
+        const _image = new Image(image);
+        o.onImageData?.(err, ok, _image);
+      };
       return _o;
     });
     const streams = this.camera.createStreams(_option);
 
     return streams.map((s) => {
       const st = new Stream(s);
-      // immediately overwrite onImageData
-      st.config({
-        onImageData: option[s.streamIndex].onImageData,
-      });
+
+      // st.config({
+      //   onImageData: option[s.streamIndex].onImageData,
+      // });
       return st;
     });
   }
