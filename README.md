@@ -2,24 +2,24 @@
 nodejs binding for libcamera
 
 ## 1. Install applications (Crossplatform)
-sudo apt install libcamera-dev libtiff-dev libexif-dev sshpass  
+sudo apt install libcamera-dev libtiff-dev libexif-dev libturbojpeg0-dev 
 
-* #### compile for 64 bit system    
-    sudo apt install gcc-12-aarch64-linux-gnu g++-12-aarch64-linux-gnu  
-* #### compile for 32 bit system    
-    sudo apt install gcc-12-arm-linux-gnueabihf g++-12-arm-linux-gnueabihf   
+* #### compile for Raspberry Pi OS 64 bit system (Bookworm)   
+    sudo apt install clang gcc-12-aarch64-linux-gnu g++-12-aarch64-linux-gnu  
+* #### compile for Raspberry Pi OS 32 bit system (Bookworm)   
+    sudo apt install clang gcc-12-arm-linux-gnueabihf g++-12-arm-linux-gnueabihf   
 
-## 2. Set env (Crossplatform)
-* #### compile for 64 bit system    
-    export AR=aarch64-linux-gnu-ar  
-    export CC=aarch64-linux-gnu-gcc-12   
-    export CXX=aarch64-linux-gnu-g++-12  
-    export LINK=aarch64-linux-gnu-g++-12    
-* #### compile for 32 bit system    
-    export AR=arm-linux-gnueabihf-ar    
-    export CC=arm-linux-gnueabihf-gcc-12    
-    export CXX=arm-linux-gnueabihf-g++-12   
-    export LINK=arm-linux-gnueabihf-g++-12   
+## 2. Fetch .so files (Crossplatform)
+fetch 
+```
+lib64/libcamera.so.0.5 
+libcamera-base.so.0.5.1 
+libexif.so.12.3.4 
+libjpeg.so.62.3.0 
+libtiff.so.6.0.0 
+libturbojpeg.so.0.2.0
+```
+from Raspberry Pi to project workspace
 ## 3. Configure
 npm run configure
 ## 4. Build Binary
