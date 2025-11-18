@@ -9,6 +9,7 @@
 
 using WorkerType = void *;
 
+Napi::Value convertControlValue(Napi::Env env, const libcamera::ControlValue &value);
 class SaveWorker : public AsyncWorker
 {
   public:
@@ -70,7 +71,7 @@ class Image : public Napi::ObjectWrap<Image>
 
     Napi::Value save(const Napi::CallbackInfo &info);
 
+    Napi::Value getMetadata(const Napi::CallbackInfo &info);
+
     static Napi::Object Init(Napi::Env env, Napi::Object exports);
 };
-
-// Napi::FunctionReference *Image::constructor = new Napi::FunctionReference();

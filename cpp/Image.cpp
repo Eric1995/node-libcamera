@@ -124,6 +124,83 @@ Napi::Value Image::getPixelFormatFourcc(const Napi::CallbackInfo &info)
     return Napi::Number::New(info.Env(), stream->configuration().pixelFormat.fourcc());
 }
 
+Napi::Value convertControlValue(Napi::Env env, const libcamera::ControlValue &value)
+{
+    if (value.isArray())
+    {
+        Napi::Array arr = Napi::Array::New(env);
+        auto values = value.data();
+        auto numElements = value.numElements();
+        for (uint32_t i = 0; i < numElements; i++)
+        {
+            auto step = values.size() / numElements;
+            auto ele = values.subspan(i * step, step);
+            uint64_t result = 0;
+            std::memcpy(&result, ele.data(), step);
+            arr.Set(i, Napi::Number::New(env, result));
+        }
+        return arr;
+    }
+    switch (value.type())
+    {
+    case libcamera::ControlType::ControlTypeNone:
+        return env.Null();
+    case libcamera::ControlType::ControlTypeBool:
+        return Napi::Boolean::New(env, value.get<bool>());
+    case libcamera::ControlType::ControlTypeByte:
+        return Napi::Number::New(env, value.get<unsigned char>());
+    case libcamera::ControlType::ControlTypeUnsigned16:
+        return Napi::Number::New(env, value.get<uint16_t>());
+    case libcamera::ControlType::ControlTypeUnsigned32:
+        return Napi::Number::New(env, value.get<uint32_t>());
+    case libcamera::ControlType::ControlTypeInteger32:
+        return Napi::Number::New(env, value.get<int32_t>());
+    case libcamera::ControlType::ControlTypeInteger64:
+        // JavaScript numbers are doubles, which can safely represent integers up to 2^53.
+        // int64_t might exceed this, but for most camera metadata it's fine.
+        return Napi::Number::New(env, static_cast<double>(value.get<int64_t>()));
+    case libcamera::ControlType::ControlTypeFloat:
+        return Napi::Number::New(env, value.get<float>());
+    case libcamera::ControlType::ControlTypeString:
+        return Napi::String::New(env, value.get<std::string>());
+    case libcamera::ControlType::ControlTypeRectangle: {
+        libcamera::Rectangle r = value.get<libcamera::Rectangle>();
+        Napi::Object obj = Napi::Object::New(env);
+        obj.Set("x", r.x);
+        obj.Set("y", r.y);
+        obj.Set("width", r.width);
+        obj.Set("height", r.height);
+        return obj;
+    }
+    case libcamera::ControlType::ControlTypeSize: {
+        libcamera::Size s = value.get<libcamera::Size>();
+        Napi::Object obj = Napi::Object::New(env);
+        obj.Set("width", s.width);
+        obj.Set("height", s.height);
+        return obj;
+    }
+    case libcamera::ControlType::ControlTypePoint: {
+        libcamera::Point p = value.get<libcamera::Point>();
+        Napi::Object obj = Napi::Object::New(env);
+        obj.Set("x", p.x);
+        obj.Set("y", p.y);
+        return obj;
+    }
+    default:
+        // For complex types like arrays, return their string representation.
+        return Napi::String::New(env, value.toString());
+    }
+}
+
+Napi::Value Image::getMetadata(const Napi::CallbackInfo &info)
+{
+    Napi::Object metadata_obj = Napi::Object::New(info.Env());
+    const auto &id_map = *metadata->idMap();
+    for (auto const &[id, value] : *metadata)
+        metadata_obj.Set(id_map.at(id)->name(), convertControlValue(info.Env(), value));
+    return metadata_obj;
+}
+
 Napi::Value Image::save(const Napi::CallbackInfo &info)
 {
     auto option = info[0].As<Napi::Object>();
@@ -156,6 +233,7 @@ Napi::Object Image::Init(Napi::Env env, Napi::Object exports)
                                           InstanceAccessor<&Image::getPixelFormat>("pixelFormat", static_cast<napi_property_attributes>(napi_enumerable)),
                                           InstanceAccessor<&Image::getPixelFormatFourcc>("pixelFormatFourcc", static_cast<napi_property_attributes>(napi_enumerable)),
                                           InstanceMethod<&Image::save>("save", static_cast<napi_property_attributes>(napi_enumerable)),
+                                          InstanceMethod<&Image::getMetadata>("getMetadata", static_cast<napi_property_attributes>(napi_enumerable)),
                                       });
     constructor = Napi::Persistent(func);
     exports.Set("Image", func);

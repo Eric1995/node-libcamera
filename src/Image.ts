@@ -15,6 +15,11 @@ class Image {
     return this.image.getData();
   }
 
+  public getMetadata() {
+    return this.image.getMetadata();
+  }
+
+
   public get stride() {
     return this.image.stride;
   }

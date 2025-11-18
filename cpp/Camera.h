@@ -101,7 +101,9 @@ class Camera : public Napi::ObjectWrap<Camera>
 
     void requestComplete(const Napi::CallbackInfo &info, libcamera::Request *request);
 
-    Napi::Value setControl(const Napi::CallbackInfo &info);
+    Napi::Value setControls(const Napi::CallbackInfo &info);
+
+    Napi::Value removeControl(const Napi::CallbackInfo &info);
 
     Napi::Value config(const Napi::CallbackInfo &info);
 
@@ -113,6 +115,8 @@ class Camera : public Napi::ObjectWrap<Camera>
     Napi::Value stop(const Napi::CallbackInfo &info);
 
     Napi::Value release(const Napi::CallbackInfo &info);
+
+    Napi::Value resetControls(const Napi::CallbackInfo &info);
 
     static Napi::Object Init(Napi::Env env, Napi::Object exports);
 };

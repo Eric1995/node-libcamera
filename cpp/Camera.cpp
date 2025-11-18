@@ -136,16 +136,14 @@ Napi::Value Camera::createStreams(const Napi::CallbackInfo &info)
         napi_stream_array[i] = stream_obj;
         streams.push_back(stream);
         stream_index_map[stream] = i;
-
         for (unsigned int j = 0; j < streamConfig.bufferCount; j++)
         {
             if (requests.size() <= j)
             {
-                std::unique_ptr<libcamera::Request> req = camera->createRequest();
-                requests.push_back(std::move(req));
+                requests.push_back(camera->createRequest(j));
             }
             auto &request = requests.at(j);
-            std::string name("rpicam-apps" + std::to_string(i));
+            std::string name("rpicam-apps-" + std::to_string(i) + "-" + std::to_string(j));
             libcamera::UniqueFD fd = dma_heap_.alloc(name.c_str(), streamConfig.frameSize);
             std::vector<libcamera::FrameBuffer::Plane> plane(1);
             plane[0].fd = libcamera::SharedFD(std::move(fd));
@@ -173,17 +171,13 @@ Napi::Value Camera::start(const Napi::CallbackInfo &info)
     {
         for (auto &req : requests)
         {
-            if (req->status() == libcamera::Request::Status::RequestPending)
-            {
-                req->controls().merge(control_list);
-                camera->queueRequest(req.get());
-            }
-            else
+            if (req->status() != libcamera::Request::Status::RequestPending)
             {
                 req->reuse(libcamera::Request::ReuseBuffers);
-                req->controls().merge(control_list);
-                camera->queueRequest(req.get());
             }
+            req->controls().clear();
+            req->controls().merge(control_list);
+            camera->queueRequest(req.get());
         }
     }
     return Napi::Number::New(info.Env(), ret);
@@ -208,6 +202,7 @@ void Camera::requestComplete(const Napi::CallbackInfo &info, libcamera::Request 
         front->reuse(libcamera::Request::ReuseBuffers);
         if (state == Running && auto_queue_request)
         {
+            front->controls().clear();
             front->controls().merge(control_list);
             camera->queueRequest(front);
             requests_deque.pop_front();
@@ -225,6 +220,7 @@ Napi::Value Camera::sendRequest(const Napi::CallbackInfo &info)
         auto req = requests[requests_deque.size()].get();
         if (req->status() == libcamera::Request::Status::RequestPending)
         {
+            req->controls().clear();
             req->controls().merge(control_list);
             camera->queueRequest(req);
         }
@@ -233,6 +229,7 @@ Napi::Value Camera::sendRequest(const Napi::CallbackInfo &info)
     {
         auto front = requests_deque.front();
         front->reuse(libcamera::Request::ReuseBuffers);
+        front->controls().clear();
         front->controls().merge(control_list);
         camera->queueRequest(front);
         requests_deque.pop_front();

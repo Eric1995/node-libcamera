@@ -75,8 +75,16 @@ class Camera {
     return this.camera.getAvailableControls();
   }
 
-  public setControl(controlls: Parameters<RawCamera['setControl']>[0]) {
-    return this.camera.setControl(controlls);
+  public setControls(controlls: Parameters<RawCamera['setControls']>[0]) {
+    return this.camera.setControls(controlls);
+  }
+
+  public removeControl(controlls: Parameters<RawCamera['removeControl']>[0]) {
+    return this.camera.removeControl(controlls);
+  }
+
+  public resetControls(controlls?: Parameters<RawCamera['resetControls']>[0]) {
+    return this.camera.resetControls(controlls);
   }
 
   public get sensorModes() {

@@ -88,6 +88,12 @@ export enum PixelFormat {
   MONO_PISP_COMP1 = 'MONO_PISP_COMP1',
 }
 
+export enum AeStateEnum {
+  AeStateIdle = 0,
+  AeStateSearching = 1,
+  AeStateConverged = 2,
+}
+
 export enum AeMeteringModeEnum {
   MeteringCentreWeighted = 0,
   MeteringSpot = 1,
@@ -95,11 +101,34 @@ export enum AeMeteringModeEnum {
   MeteringCustom = 3,
 }
 
+export enum AeConstraintModeEnum {
+  ConstraintNormal = 0,
+  ConstraintHighlight = 1,
+  ConstraintShadows = 2,
+  ConstraintCustom = 3,
+}
+
 export enum AeExposureModeEnum {
   ExposureNormal = 0,
   ExposureShort = 1,
   ExposureLong = 2,
   ExposureCustom = 3,
+}
+
+export enum ExposureTimeModeEnum {
+  ExposureTimeModeAuto = 0,
+  ExposureTimeModeManual = 1,
+}
+
+export enum AnalogueGainModeEnum {
+  AnalogueGainModeAuto = 0,
+  AnalogueGainModeManual = 1,
+}
+
+export enum AeFlickerModeEnum {
+  FlickerOff = 0,
+  FlickerManual = 1,
+  FlickerAuto = 2,
 }
 
 export enum AwbModeEnum {
@@ -119,28 +148,165 @@ export enum AfModeEnum {
   AfModeContinuous = 2,
 }
 
+export enum AfSpeedEnum {
+  AfSpeedNormal = 0,
+  AfSpeedFast = 1,
+}
+
+export enum AfMeteringEnum {
+  AfMeteringAuto = 0,
+  AfMeteringWindows = 1,
+}
+
+export enum AfTriggerEnum {
+  AfTriggerStart = 0,
+  AfTriggerCancel = 1,
+}
+
+export enum AfPauseEnum {
+  AfPauseImmediate = 0,
+  AfPauseDeferred = 1,
+  AfPauseResume = 2,
+}
+
+export enum AfStateEnum {
+  AfStateIdle = 0,
+  AfStateScanning = 1,
+  AfStateFocused = 2,
+  AfStateFailed = 3,
+}
+
+export enum AfPauseStateEnum {
+  AfPauseStateRunning = 0,
+  AfPauseStatePausing = 1,
+  AfPauseStatePaused = 2,
+}
+
+export enum HdrModeEnum {
+  HdrModeOff = 0,
+  HdrModeMultiExposureUnmerged = 1,
+  HdrModeMultiExposure = 2,
+  HdrModeSingleExposure = 3,
+  HdrModeNight = 4,
+}
+
+export enum HdrChannelEnum {
+  HdrChannelNone = 0,
+  HdrChannelShort = 1,
+  HdrChannelMedium = 2,
+  HdrChannelLong = 3,
+}
+
+// export interface ControlListIn {
+//   AeEnable?: boolean;
+//   AeMeteringMode?: AeMeteringModeEnum;
+//   AeConstraintMode?: AeConstraintModeEnum;
+//   AeExposureMode?: AeExposureModeEnum;
+//   ExposureValue?: number;
+//   ExposureTime?: number;
+//   ExposureTimeMode?: ExposureTimeModeEnum;
+//   AnalogueGain?: number;
+//   AnalogueGainMode?: AnalogueGainModeEnum;
+//   AeFlickerMode?: AeFlickerModeEnum;
+//   AeFlickerPeriod?: number;
+//   Brightness?: number;
+//   Contrast?: number;
+//   AwbEnable?: boolean;
+//   AwbMode?: AwbModeEnum;
+//   ColourGains?: [number, number];
+//   Saturation?: number;
+//   Sharpness?: number;
+//   ColourCorrectionMatrix?: [number, number, number, number, number, number, number, number, number];
+//   ScalerCrop?: [number, number, number, number] | { x: number; y: number; width: number; height: number };
+//   DigitalGain?: number;
+//   FrameDurationLimits?: [number, number];
+//   AfMode?: AfModeEnum;
+//   AfRange?: number;
+//   AfSpeed?: AfSpeedEnum;
+//   AfMetering?: AfMeteringEnum;
+//   AfWindows?: [number, number, number, number][];
+//   AfTrigger?: AfTriggerEnum;
+//   AfPause?: AfPauseEnum;
+//   LensPosition?: number;
+//   HdrMode?: HdrModeEnum;
+//   Gamma?: number;
+//   DebugMetadataEnable?: boolean;
+// }
+
 export interface ControlList {
-  ExposureTime?: number;
-  AnalogueGain?: number;
+  AeEnable?: boolean;
+  AeState?: AeStateEnum;
   AeMeteringMode?: AeMeteringModeEnum;
+  AeConstraintMode?: AeConstraintModeEnum;
   AeExposureMode?: AeExposureModeEnum;
   ExposureValue?: number;
-  AwbMode?: AwbModeEnum;
+  ExposureTime?: number;
+  ExposureTimeMode?: ExposureTimeModeEnum;
+  AnalogueGain?: number;
+  AnalogueGainMode?: AnalogueGainModeEnum;
+  AeFlickerMode?: AeFlickerModeEnum;
+  AeFlickerPeriod?: number;
+  AeFlickerDetected?: number;
   Brightness?: number;
   Contrast?: number;
+  Lux?: number;
+  AwbEnable?: boolean;
+  AwbMode?: AwbModeEnum;
+  AwbLocked?: boolean;
+  ColourGains?: [number, number];
+  ColourTemperature?: number;
   Saturation?: number;
+  SensorBlackLevels?: [number, number, number, number];
   Sharpness?: number;
-  AfRange?: number;
-  AfSpeed?: number;
-  LensPosition?: number;
+  FocusFoM?: number;
+  ColourCorrectionMatrix?: [number, number, number, number, number, number, number, number, number];
+  ScalerCrop?: { x: number; y: number; width: number; height: number };
+  DigitalGain?: number;
+  FrameDuration?: number;
+  FrameDurationLimits?: [number, number];
+  SensorTemperature?: number;
+  SensorTimestamp?: number;
   AfMode?: AfModeEnum;
-  AfTrigger?: number;
+  AfRange?: number;
+  AfSpeed?: AfSpeedEnum;
+  AfMetering?: AfMeteringEnum;
+  AfWindows?: { x: number; y: number; width: number; height: number }[];
+  AfTrigger?: AfTriggerEnum;
+  AfPause?: AfPauseEnum;
+  LensPosition?: number;
+  AfState?: AfStateEnum;
+  AfPauseState?: AfPauseStateEnum;
+  HdrMode?: HdrModeEnum;
+  HdrChannel?: HdrChannelEnum;
+  Gamma?: number;
+  DebugMetadataEnable?: boolean;
+  FrameWallClock?: number;
 }
+
+export type ControlListIn = Omit<
+  ControlList,
+  | 'AeState'
+  | 'AeFlickerDetected'
+  | 'Lux'
+  | 'AwbLocked'
+  | 'ColourTemperature'
+  | 'SensorBlackLevels'
+  | 'FocusFoM'
+  | 'FrameDuration'
+  | 'SensorTemperature'
+  | 'SensorTimestamp'
+  | 'AfState'
+  | 'AfPauseState'
+  | 'HdrChannel'
+  | 'FrameWallClock'
+>;
+export type ControlListOut = Omit<ControlList, 'AeEnable' | 'AfTrigger' | 'AfPause'>;
 
 export interface RawCameraImage {
   fd: number;
   frameSize: number;
   getData: () => ArrayBuffer;
+  getMetadata: () => ControlListOut;
   colorSpace: string;
   stride: number;
   pixelFormat: PixelFormat;
@@ -217,7 +383,9 @@ export interface RawCamera {
   getAvailableControls: () => {
     [k in keyof ControlList]: string;
   };
-  setControl: (controlls: ControlList) => undefined;
+  setControls: (controlls: ControlListIn) => undefined;
+  removeControl: (controlls: keyof ControlListIn) => undefined;
+  resetControls: (controlls?: (keyof ControlListIn)[]) => undefined;
   sensorModes: {
     size: string;
     pix: string;
